@@ -14,6 +14,8 @@ namespace MessagePack.CryptoDto
             channelStore = new Dictionary<string, CryptoDtoChannel>();
         }
 
+        public int Count { get { lock (channelStoreLock) { return channelStore.Count; } } }
+        
         public void CreateChannel(string channelTag, int receiveSequenceHistorySize = 10)
         {
             lock (channelStoreLock)
