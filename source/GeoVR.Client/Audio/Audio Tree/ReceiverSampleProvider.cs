@@ -71,8 +71,8 @@ namespace GeoVR.Client
             }
         }
 
-        private const float clickGain = 1.0f;
-        private const double blockToneGain = 0.10f;
+        private const float clickGain = 1.1f;
+        private const double blockToneGain = 0.13f;
 
         public ushort ID { get; private set; }
 

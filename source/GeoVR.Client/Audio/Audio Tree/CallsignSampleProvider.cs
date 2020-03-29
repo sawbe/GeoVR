@@ -19,7 +19,7 @@ namespace GeoVR.Client
         public WaveFormat WaveFormat { get; private set; }
 
         private const float whiteNoiseGainMin = 0.17f; //0.01;
-        private const float hfWhiteNoiseGainMin = 0.10f; //0.01;
+        private const float hfWhiteNoiseGainMin = 0.16f; //0.01;
         private const float acBusGainMin = 0.0028f;    //0.002;
         private const int frameCount = 960;
         private const int idleTimeoutMs = 500;

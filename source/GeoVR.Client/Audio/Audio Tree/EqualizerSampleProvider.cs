@@ -77,7 +77,7 @@ namespace GeoVR.Client
             BiQuadFilter[,] filters;
             switch (preset)
             {
-                case EqualizerPresets.VHFEmulation:
+               case EqualizerPresets.VHFEmulation:
                     filters = new BiQuadFilter[channels, 5];
 
                     for (int i = 0; i < channels; i++)
