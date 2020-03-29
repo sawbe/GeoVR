@@ -96,7 +96,7 @@ namespace GeoVR.Client
             simpleCompressorEffect.MakeUpGain = -5.5;
 
             // Create the voice EQ
-            voiceEq = new EqualizerSampleProvider(simpleCompressorEffect, EqualizerPresets.VHFEmulation);
+            voiceEq = new EqualizerSampleProvider(simpleCompressorEffect, AudioConfig.Instance.VhfEqualizer);
 
             BypassEffects = false;
             DistanceRatio = 1;

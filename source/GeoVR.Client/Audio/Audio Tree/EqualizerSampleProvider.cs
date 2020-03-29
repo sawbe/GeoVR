@@ -78,32 +78,29 @@ namespace GeoVR.Client
             switch (preset)
             {
                 case EqualizerPresets.VHFEmulation:
+                    filters = new BiQuadFilter[channels, 5];
+
+                    for (int i = 0; i < channels; i++)
+                    {
+                        filters[i, 0] = BiQuadFilter.HighPassFilter(sampleRate, 310, 0.25f);
+                        filters[i, 1] = BiQuadFilter.PeakingEQ(sampleRate, 450, 0.75f, 17.0f);
+                        filters[i, 2] = BiQuadFilter.PeakingEQ(sampleRate, 1450, 1.0f, 25.0f);
+                        filters[i, 3] = BiQuadFilter.PeakingEQ(sampleRate, 2000, 1.0f, 25.0f);
+                        filters[i, 4] = BiQuadFilter.LowPassFilter(sampleRate, 2500, 0.25f);
+                    }
+                    break;
+                case EqualizerPresets.VHFEmulation2:
                     filters = new BiQuadFilter[channels, 7];
 
                     for (int i = 0; i < channels; i++)
                     {
-                        //filters[i, 0] = BiQuadFilter.HighPassFilter(sampleRate, 310, 0.25f);
-
-                        //filters[i, 1] = BiQuadFilter.PeakingEQ(sampleRate, 450, 0.75f, 17.0f);
-
-                        //filters[i, 2] = BiQuadFilter.PeakingEQ(sampleRate, 1450, 1.0f, 25.0f);
-
-                        //filters[i, 3] = BiQuadFilter.PeakingEQ(sampleRate, 2000, 1.0f, 25.0f);
-
-                        //filters[i, 4] = BiQuadFilter.LowPassFilter(sampleRate, 2500, 0.25f);
-
-                        // filters[i,k] = BiQuadFilter(a0, a1, a2, b0, b1, b2);
-
-                        filters[i, 0] =  BiQuadFilterExt.Build(1.0, 0.0, 0.0, -0.01, 0.0, 0.0);
+                        filters[i, 0] = BiQuadFilterExt.Build(1.0, 0.0, 0.0, -0.01, 0.0, 0.0);
                         filters[i, 1] = BiQuadFilterExt.Build(1.0, -1.7152995098277, 0.761385315196423, 0.0, 1.0, 0.753162969638192);
                         filters[i, 2] = BiQuadFilterExt.Build(1.0, -1.71626681678914, 0.762433947105989, 1.0, -2.29278115712509, 1.00033663293577);
                         filters[i, 3] = BiQuadFilterExt.Build(1.0, -1.79384214686345, 0.909678364879526, 1.0, -2.05042803669041, 1.05048374237779);
                         filters[i, 4] = BiQuadFilterExt.Build(1.0, -1.79409285259567, 0.909822671281377, 1.0, -1.95188929743297, 0.951942325888074);
                         filters[i, 5] = BiQuadFilterExt.Build(1.0, -1.9390093095185, 0.9411847259142, 1.0, -1.82547932903698, 1.09157529229851);
                         filters[i, 6] = BiQuadFilterExt.Build(1.0, -1.94022767750807, 0.942630574503006, 1.0, -1.67241244173042, 0.916184578658119);
-
-
-                        
                     }
                     break;
                 default:
@@ -115,6 +112,7 @@ namespace GeoVR.Client
 
     public enum EqualizerPresets
     {
-        VHFEmulation = 1
+        VHFEmulation = 1,
+        VHFEmulation2 = 2,
     }
 }
