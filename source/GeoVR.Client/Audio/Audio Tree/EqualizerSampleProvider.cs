@@ -73,35 +73,33 @@ namespace GeoVR.Client
         }
 
         private BiQuadFilter[,] SetupPreset(EqualizerPresets preset, float sampleRate)
-            {
+        {
             BiQuadFilter[,] filters;
             switch (preset)
             {
                 case EqualizerPresets.VHFEmulation:
-                    filters = new BiQuadFilter[channels, 5];
+                    filters = new BiQuadFilter[channels, 7];
 
                     for (int i = 0; i < channels; i++)
                     {
-                        filters[i, 0] = BiQuadFilter.HighPassFilter(sampleRate, 310, 0.25f);
+                        //filters[i, 0] = BiQuadFilter.HighPassFilter(sampleRate, 310, 0.25f);
 
-                        filters[i, 1] = BiQuadFilter.PeakingEQ(sampleRate, 450, 0.75f, 17.0f);
+                        //filters[i, 1] = BiQuadFilter.PeakingEQ(sampleRate, 450, 0.75f, 17.0f);
 
-                        filters[i, 2] = BiQuadFilter.PeakingEQ(sampleRate, 1450, 1.0f, 25.0f);
+                        //filters[i, 2] = BiQuadFilter.PeakingEQ(sampleRate, 1450, 1.0f, 25.0f);
 
-                        filters[i, 3] = BiQuadFilter.PeakingEQ(sampleRate, 2000, 1.0f, 25.0f);
+                        //filters[i, 3] = BiQuadFilter.PeakingEQ(sampleRate, 2000, 1.0f, 25.0f);
 
-                        filters[i, 4] = BiQuadFilter.LowPassFilter(sampleRate, 2500, 0.25f);
+                        //filters[i, 4] = BiQuadFilter.LowPassFilter(sampleRate, 2500, 0.25f);
 
                         // filters[i,k] = BiQuadFilter(a0, a1, a2, b0, b1, b2);
-
-                       // filters[i, 0] = new BiQuadFilterExt(1, 0, 0, 0.005591900032114, 0, 0); // constant gain
-                        //filters[i, 1] = new BiQuadFilterExt(1, -2.246084053669330, 1.308048105744373, 1, -2.049077000906383, 1.049132214936655);
-                        //filters[i, 2] = new BiQuadFilterExt(1, -1.717126913902030, 0.764498261867003, 1, -1.953113876762170, 0.953166433747108);
-                        //filters[i, 3] = new BiQuadFilterExt(1, -1.968349536365062, 1.094229495690919, 1, -3.207563403598932, 3.286247911643905);
-                        //filters[i, 4] = new BiQuadFilterExt(1, -1.798845366042862, 0.913885222155853, 1, -0.929195887161554, 0.324601315276864);
-                        //filters[i, 5] = new BiQuadFilterExt(1, -2.058902946698752, 1.061302377718410, 1, -1.843447350526883, 1.136863417829124);
-                        //filters[i, 6] = new BiQuadFilterExt(1, -1.939976636135262, 0.942237894371066, 1, -1.650544977015706, 0.904043632776936);
-
+                        filters[i, 0] = BiQuadFilterExt.Build(1, 0, 0, 0.005591900032114, 0, 0); // constant gain
+                        filters[i, 1] = BiQuadFilterExt.Build(1, -2.246084053669330, 1.308048105744373, 1, -2.049077000906383, 1.049132214936655);
+                        filters[i, 2] = BiQuadFilterExt.Build(1, -1.717126913902030, 0.764498261867003, 1, -1.953113876762170, 0.953166433747108);
+                        filters[i, 3] = BiQuadFilterExt.Build(1, -1.968349536365062, 1.094229495690919, 1, -3.207563403598932, 3.286247911643905);
+                        filters[i, 4] = BiQuadFilterExt.Build(1, -1.798845366042862, 0.913885222155853, 1, -0.929195887161554, 0.324601315276864);
+                        filters[i, 5] = BiQuadFilterExt.Build(1, -2.058902946698752, 1.061302377718410, 1, -1.843447350526883, 1.136863417829124);
+                        filters[i, 6] = BiQuadFilterExt.Build(1, -1.939976636135262, 0.942237894371066, 1, -1.650544977015706, 0.904043632776936);
                     }
                     break;
                 default:
