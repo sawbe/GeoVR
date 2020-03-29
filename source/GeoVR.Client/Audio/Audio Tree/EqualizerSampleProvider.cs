@@ -93,13 +93,17 @@ namespace GeoVR.Client
                         //filters[i, 4] = BiQuadFilter.LowPassFilter(sampleRate, 2500, 0.25f);
 
                         // filters[i,k] = BiQuadFilter(a0, a1, a2, b0, b1, b2);
-                        filters[i, 0] = BiQuadFilterExt.Build(1, 0, 0, 0.005591900032114, 0, 0); // constant gain
-                        filters[i, 1] = BiQuadFilterExt.Build(1, -2.246084053669330, 1.308048105744373, 1, -2.049077000906383, 1.049132214936655);
-                        filters[i, 2] = BiQuadFilterExt.Build(1, -1.717126913902030, 0.764498261867003, 1, -1.953113876762170, 0.953166433747108);
-                        filters[i, 3] = BiQuadFilterExt.Build(1, -1.968349536365062, 1.094229495690919, 1, -3.207563403598932, 3.286247911643905);
-                        filters[i, 4] = BiQuadFilterExt.Build(1, -1.798845366042862, 0.913885222155853, 1, -0.929195887161554, 0.324601315276864);
-                        filters[i, 5] = BiQuadFilterExt.Build(1, -2.058902946698752, 1.061302377718410, 1, -1.843447350526883, 1.136863417829124);
-                        filters[i, 6] = BiQuadFilterExt.Build(1, -1.939976636135262, 0.942237894371066, 1, -1.650544977015706, 0.904043632776936);
+
+                        filters[i, 0] =  BiQuadFilterExt.Build(1.0, 0.0, 0.0, -0.01, 0.0, 0.0);
+                        filters[i, 1] = BiQuadFilterExt.Build(1.0, -1.7152995098277, 0.761385315196423, 0.0, 1.0, 0.753162969638192);
+                        filters[i, 2] = BiQuadFilterExt.Build(1.0, -1.71626681678914, 0.762433947105989, 1.0, -2.29278115712509, 1.00033663293577);
+                        filters[i, 3] = BiQuadFilterExt.Build(1.0, -1.79384214686345, 0.909678364879526, 1.0, -2.05042803669041, 1.05048374237779);
+                        filters[i, 4] = BiQuadFilterExt.Build(1.0, -1.79409285259567, 0.909822671281377, 1.0, -1.95188929743297, 0.951942325888074);
+                        filters[i, 5] = BiQuadFilterExt.Build(1.0, -1.9390093095185, 0.9411847259142, 1.0, -1.82547932903698, 1.09157529229851);
+                        filters[i, 6] = BiQuadFilterExt.Build(1.0, -1.94022767750807, 0.942630574503006, 1.0, -1.67241244173042, 0.916184578658119);
+
+
+                        
                     }
                     break;
                 default:
