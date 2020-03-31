@@ -45,15 +45,8 @@ namespace GeoVR.Client
                         voiceInput.Clear();
                     }
                 }
-
-                if (value < hfFrequencyUpperLimit)
-                {
-                    hfWhiteNoise.Gain = hfWhiteNoiseGain;
-                }
-                else
-                    hfWhiteNoise.Gain = 0;
-
                 frequency = value;
+                SetHfNoise();
             }
         }
 
@@ -78,6 +71,7 @@ namespace GeoVR.Client
                         voiceInput.Clear();
                     }
                 }
+                SetHfNoise();
             }
         }
 
@@ -197,6 +191,16 @@ namespace GeoVR.Client
 
             voiceInput?.AddSilentSamples(audioDto);
             //doClickWhenAppropriate = true;
+        }
+
+        private void SetHfNoise()
+        {
+            if (Frequency < hfFrequencyUpperLimit && !Mute)
+            {
+                hfWhiteNoise.Gain = hfWhiteNoiseGain;
+            }
+            else
+                hfWhiteNoise.Gain = 0;
         }
     }
 }
