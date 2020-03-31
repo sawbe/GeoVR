@@ -19,6 +19,13 @@ namespace GeoVR.Client
         }
         //End of singleton pattern
 
+        /// <summary>
+        /// Can not be changed in realtime. Value is latched on UserClient.Start.
+        /// </summary>
         public EqualizerPresets VhfEqualizer { get; set; }
+        /// <summary>
+        /// Can not be changed in realtime. Value is latched on UserClient.Start.
+        /// </summary>
+        public bool HfSquelch { get; set; }
     }
 }

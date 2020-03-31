@@ -27,6 +27,8 @@ namespace GeoVR.Client
             }
         }
 
+        private const int hfFrequencyUpperLimit = 30000000;
+
         private uint frequency;
         public uint Frequency
         {
@@ -43,6 +45,14 @@ namespace GeoVR.Client
                         voiceInput.Clear();
                     }
                 }
+
+                if (value < hfFrequencyUpperLimit)
+                {
+                    hfWhiteNoise.Gain = hfWhiteNoiseGain;
+                }
+                else
+                    hfWhiteNoise.Gain = 0;
+
                 frequency = value;
             }
         }
@@ -73,6 +83,7 @@ namespace GeoVR.Client
 
         private const float clickGain = 1.1f;
         private const double blockToneGain = 0.13f;
+        private const float hfWhiteNoiseGain = 0.10f;
 
         public ushort ID { get; private set; }
 
@@ -81,10 +92,12 @@ namespace GeoVR.Client
         private readonly VolumeSampleProvider volume;
         private readonly MixingSampleProvider mixer;
         private readonly BlockingToneSampleProvider blockTone;
+        private readonly ResourceSoundSampleProvider hfWhiteNoise;
         private readonly List<CallsignSampleProvider> voiceInputs;
 
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
+        private bool hfSquelchEn = false;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
         {
@@ -104,9 +117,15 @@ namespace GeoVR.Client
                 mixer.AddMixerInput(voiceInput);
             };
 
-            blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Gain = 0, Frequency = 180 };
+            blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Frequency = 180, Gain = 0 };
+            hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
+
             mixer.AddMixerInput(blockTone.ToMono());
+            if (!AudioConfig.Instance.HfSquelch)
+                mixer.AddMixerInput(hfWhiteNoise.ToMono());
             volume = new VolumeSampleProvider(mixer);
+
+            hfSquelchEn = AudioConfig.Instance.HfSquelch;
         }
 
         public int Read(float[] buffer, int offset, int count)
@@ -155,7 +174,8 @@ namespace GeoVR.Client
             }
 
             voiceInput?.AddOpusSamples(audioDto, distanceRatio);
-            doClickWhenAppropriate = true;
+            if (frequency > hfFrequencyUpperLimit || hfSquelchEn)
+                doClickWhenAppropriate = true;
         }
 
         public void AddSilentSamples(IAudioDto audioDto, uint frequency, float distanceRatio)

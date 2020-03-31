@@ -18,9 +18,9 @@ namespace GeoVR.Client
     {
         public WaveFormat WaveFormat { get; private set; }
 
-        private const float whiteNoiseGainMin = 0.17f; //0.01;
-        private const float hfWhiteNoiseGainMin = 0.16f; //0.01;
-        private const float acBusGainMin = 0.0028f;    //0.002;
+        private const float vhfWhiteNoiseGain = 0.17f;
+        private const float hfWhiteNoiseGain = 0.16f;
+        private const float acBusGain = 0.0028f;
         private const int frameCount = 960;
         private const int idleTimeoutMs = 500;
 
@@ -51,8 +51,7 @@ namespace GeoVR.Client
         private readonly ReceiverSampleProvider receiver;        //To give us access to frequency
         private readonly MixingSampleProvider mixer;
         private readonly ResourceSoundSampleProvider crackleSoundProvider;
-        //private readonly SignalGenerator whiteNoise;
-        private readonly ResourceSoundSampleProvider whiteNoise;
+        private readonly ResourceSoundSampleProvider vhfWhiteNoise;
         private readonly ResourceSoundSampleProvider hfWhiteNoise;
         private readonly ResourceSoundSampleProvider acBusNoise;
 
@@ -84,7 +83,7 @@ namespace GeoVR.Client
                 ReadFully = true
             };
             crackleSoundProvider = new ResourceSoundSampleProvider(Samples.Instance.Crackle) { Looping = true, Gain = 0 };
-            whiteNoise = new ResourceSoundSampleProvider(Samples.Instance.WhiteNoise) { Looping = true, Gain = 0 };
+            vhfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.WhiteNoise) { Looping = true, Gain = 0 };
             hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
             acBusNoise = new ResourceSoundSampleProvider(Samples.Instance.AcBus) { Looping = true, Gain = 0 };
 
@@ -102,9 +101,10 @@ namespace GeoVR.Client
             DistanceRatio = 1;
 
             mixer.AddMixerInput(crackleSoundProvider);
-            mixer.AddMixerInput(whiteNoise.ToMono());
+            mixer.AddMixerInput(vhfWhiteNoise.ToMono());
             mixer.AddMixerInput(acBusNoise.ToMono());
-            mixer.AddMixerInput(hfWhiteNoise.ToMono());
+            if (AudioConfig.Instance.HfSquelch)
+                mixer.AddMixerInput(hfWhiteNoise.ToMono());
             mixer.AddMixerInput(voiceEq);
 
             timer = new System.Timers.Timer();
@@ -248,7 +248,7 @@ namespace GeoVR.Client
             if (noEffects || bypassEffects || !InUse)
             {
                 crackleSoundProvider.Gain = 0;
-                whiteNoise.Gain = 0;
+                vhfWhiteNoise.Gain = 0;
                 hfWhiteNoise.Gain = 0;
                 acBusNoise.Gain = 0;
                 simpleCompressorEffect.Enabled = false;
@@ -263,13 +263,13 @@ namespace GeoVR.Client
 
                     if (crackleFactor < 0.0f) { crackleFactor = 0.0f; }
                     if (crackleFactor > 0.20f) { crackleFactor = 0.20f; }
-                    
-                    hfWhiteNoise.Gain = hfWhiteNoiseGainMin;
-                    acBusNoise.Gain = acBusGainMin + 0.001f;
+
+                    vhfWhiteNoise.Gain = 0;
+                    hfWhiteNoise.Gain = hfWhiteNoiseGain;
+                    acBusNoise.Gain = acBusGain + 0.001f;
                     simpleCompressorEffect.Enabled = true;
                     voiceEq.Bypass = false;
                     voiceEq.OutputGain = 0.38f;
-                    whiteNoise.Gain = 0;
                 }
                 else
                 {
@@ -280,13 +280,13 @@ namespace GeoVR.Client
 
                     crackleSoundProvider.Gain = crackleFactor * 2;
 
-                    whiteNoise.Gain = whiteNoiseGainMin;
-                    acBusNoise.Gain = acBusGainMin;
+                    vhfWhiteNoise.Gain = vhfWhiteNoiseGain;
+                    hfWhiteNoise.Gain = 0;
+                    acBusNoise.Gain = acBusGain;
                     simpleCompressorEffect.Enabled = true;
                     voiceEq.Bypass = false;
                     voiceEq.OutputGain = 1.0 - crackleFactor * 3.7;
                 }
-
             }
         }
     }
