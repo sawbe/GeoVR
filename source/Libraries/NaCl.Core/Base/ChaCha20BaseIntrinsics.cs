@@ -1,4 +1,4 @@
-﻿#if NETCOREAPP3_0
+﻿#if NETCOREAPP3_0 || NETCOREAPP3_1 || NETCOREAPP5_0
 #pragma warning disable IDE0007 // Use implicit type
 using System;
 using System.Collections.Generic;
