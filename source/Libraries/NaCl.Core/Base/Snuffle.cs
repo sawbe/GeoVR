@@ -168,7 +168,7 @@
             return plaintext;
         }
 
-#if NETCOREAPP3_0
+#if NETCOREAPP3_0 || NETCOREAPP3_1 || NETCOREAPP5_0
         private void Process(ReadOnlySpan<byte> nonce, Span<byte> output, ReadOnlySpan<byte> input, int offset = 0)
         {
             ProcessStream(nonce, output, input, InitialCounter, offset);

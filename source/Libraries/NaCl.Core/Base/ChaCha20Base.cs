@@ -68,7 +68,7 @@
             ByteIntegerConverter.WriteLittleEndian32(block, 0, ref state);
         }
 
-#if NETCOREAPP3_0
+#if NETCOREAPP3_0 || NETCOREAPP3_1 || NETCOREAPP5_0
         public override unsafe void ProcessStream(ReadOnlySpan<byte> nonce, Span<byte> output, ReadOnlySpan<byte> input, int initialCounter, int offset = 0)
         {
             var state = ByteIntegerConverter.Array16ToArray(CreateInitialState(nonce, initialCounter));
