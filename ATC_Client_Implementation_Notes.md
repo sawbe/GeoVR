@@ -47,9 +47,31 @@ Will return all the callsigns currently being received and the transciver ID
         }
 ```
 
+
+### Starting Client Audio System
+
+Starts the Audio Subsystem
+
+  ```GeoUserClient.Start(mConfig.InputDeviceName, mConfig.OutputDeviceName, listOfTrans);```
+
+### Stopping Client Audio System
+
+``` GeoUserClient.Stop();```
+
+### Connecting Client
+
+Make your connection string ClientName + Version... eg  VATSYS 0.5.5a
+
+```await GeoUserClient.Connect(mConfig.NetworkLogin, mConfig.NetworkPassword, clientCallsign,"Standalone " + Application.ProductVersion);```
+
+
+### Disconnecting Client
+
+ GeoUserClient.Disconnect("Closing");  //Reason for disconnection, ie form closes, disconnect pressed
+
 ###   Transceiver List
 
-Each transceiver is a radio mast, a list of transceiver information can be pulled from database (further down), update your transceiver list whenever it changes.  Whenever a transceiver is added you receive on it.
+Each transceiver is a radio mast, a list of transceiver information can be pulled from database (further down), update your transceiver list whenever it changes.  Whenever a transceiver is added you receive on it.  You can have multiple transcievers per frequency. 
 
 ```
 List<TransceiverDto> translist = new List<TransceiverDto>();
@@ -70,21 +92,16 @@ GeoUserClient.UpdateTransceivers(translist);
 
 ### Transmitting Transceivers
 
-An array of all Transceivers which are transmitting when PTT is pressed
+An array of all Transceivers which are transmitting when PTT is pressed.
 
 ```
 txRadios.Add(new TxTransceiverDto() { ID = 0 });
 GeoUserClient.TransmittingTransceivers(txRadios.ToArray());
 ```
 
-### PTT
-
-```GeoUserClient.PTT(active);```
-
-
 ### Cross Coupling
 
-You can cross couple your transceivers as follows.
+You can cross couple your transceivers as follows.  You can cross couple transceivers on a single frequency or multiple transcivers on multiple frequencies
 
 ```
   List<ushort> crossCoupledTransceivers = new List<ushort>();
@@ -93,6 +110,26 @@ You can cross couple your transceivers as follows.
    
     GeoUserClient.UpdateCrossCoupleGroups(new List<CrossCoupleGroupDto>() { new CrossCoupleGroupDto() { ID = 0, TransceiverIDs = crossCoupledTransceivers } });
     
-    ```
+```
    
+### PTT
+
+```GeoUserClient.PTT(active);```
+
+
+### Get all Transceivers from Database for a station
+
+```GeoUserClient.ApiServerConnection.GetStationTransceiversAllDistinctObeyExclusions(clientCallsign);```
+
+### Populate VCCS Panel from Database 
+
+ var topDownStations = await GeoUserClient.ApiServerConnection.GetVccsStations(clientCallsign);
+ 
+ ### Get data for a single station
+ 
+ StationDto stationData = await GeoUserClient.ApiServerConnection.GetStation(stationName);
+ 
+ 
+
+
    
