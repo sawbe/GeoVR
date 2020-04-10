@@ -1,0 +1,37 @@
+# Hints for client developers (using the C# client library)
+
+### UpdateTransceivers(...)
+
+- Call immediately if:
+	- One or more frequencies change
+	- One or more transceivers are removed
+	- One or more transceivers are added
+	- One or more transceiver IDs change
+	- An aircraft 'reposition' event occurs from the simulator (if applicable)
+- Call on a 5 second interval if:
+	- One or more transceivers are moving
+	
+### TransmittingTransceivers(...)
+
+- Call immediately if:
+	- One or more transceivers change 'TX' state
+	
+### PTT(bool active)
+
+- Call immediately if:
+	- User begins PTT
+	- User ends PTT
+	
+### Aliasing
+
+Recap from Gary, Ross, Justin chats...
+
+Whenever a controller comes within range, or goes out of range, or changes his primary frequency, I perform the following checks to see if I need to tune an HF freq
+I iterate over all in-range controllers, looking for one who's primary frequency (normalized) matches the one that is tuned in either of my COM radios
+if I find any (realizing there may be multiple), I check each of them against the database of positions which have alias frequencies
+in that check, the callsign must fuzzy match
+and the frequency must match the controller's non-normalized frequency
+if any such match is found, I tune that positions HF frequency
+a fuzzy match is where the callsign prefix and suffix match, but the stuff in the middle of the callsign (if any) does not have to match
+	
+	
