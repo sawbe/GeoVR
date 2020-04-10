@@ -67,7 +67,7 @@ Make your connection string ClientName + Version... eg  VATSYS 0.5.5a
 
 ### Disconnecting Client
 
- GeoUserClient.Disconnect("Closing");  //Reason for disconnection, ie form closes, disconnect pressed
+ ```GeoUserClient.Disconnect("Closing");  //Reason for disconnection, ie form closes, disconnect pressed```
 
 ###   Transceiver List
 
