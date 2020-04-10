@@ -50,7 +50,7 @@ Will return all the callsigns currently being received and the transciver ID
 
 ### Starting Client Audio System
 
-Starts the Audio Subsystem
+Starts the Audio Subsystem.  List of Trans is a list of transcievers your client has numbered from 0 to however many transceivers you have.  You will have to start the client with however many you think you need, and then restart if more are added.  In standalone we start with 10 and then if it goes above that restart the subsystem with more trans.  With every transceiver created the CPU will increase as each transceiver is an naudio mixer channel.  
 
   ```GeoUserClient.Start(mConfig.InputDeviceName, mConfig.OutputDeviceName, listOfTrans);```
 
@@ -79,7 +79,7 @@ List<TransceiverDto> translist = new List<TransceiverDto>();
   translist.Add(new TransceiverDto()
                 {
                     ID = 0,
-                    Frequency = InjectCom1,
+                    Frequency = freq,
                     LatDeg = latDeg,
                     LonDeg = lonDeg,
                     HeightAglM = HeightAglM,
