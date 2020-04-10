@@ -1,4 +1,4 @@
-#ATC Client Implementation Notes
+# ATC Client Implementation Notes
 
 ### Instantiating Client
 
@@ -7,13 +7,14 @@ UserClient GeoUserClient = new UserClient("https://voice1.vatsim.uk", UserClient
 ###  Connected Event
 
 When server connection is established this can be used to update your UI
-
+```
             GeoUserClient.Connected += UserClient_Connected;
             
               private void UserClient_Connected(object sender, ConnectedEventArgs e)
 
         {
         }
+    ```
     
 ### Disconnected Event
           
