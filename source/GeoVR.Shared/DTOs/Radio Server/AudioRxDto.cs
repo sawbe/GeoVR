@@ -1,14 +1,17 @@
 ﻿using MessagePack;
 using MessagePack.CryptoDto;
+using System;
+using System.Collections.Generic;
 
 namespace GeoVR.Shared
 {
+    [Obsolete]
     [MessagePackObject]
-    [CryptoDto(ShortDtoNames.AudioTxDto)]
-    public class AudioTxDto : IMsgPackTypeName, IAudioDto           //Tx from the perspective of the client
+    [CryptoDto(ShortDtoNames.AudioRxDto)]
+    public class AudioRxDto : IMsgPackTypeName, IAudioDto
     {
         [IgnoreMember]
-        public const string TypeNameConst = ShortDtoNames.AudioTxDto;
+        public const string TypeNameConst = ShortDtoNames.AudioRxDto;
         [IgnoreMember]
         public string TypeName { get { return TypeNameConst; } }
         [Key(0)]
@@ -19,14 +22,12 @@ namespace GeoVR.Shared
         public byte[] Audio { get; set; }
         [Key(3)]
         public bool LastPacket { get; set; }
-
+        
         [Key(4)]
-        public TxTransceiverDto[] Transceivers { get; set; }
+        public List<RxTransceiverDto> Transceivers { get; set; }
         [Key(5)]
-        public VoiceRoomDto[] VoiceRooms { get; set; }
+        public List<VoiceRoomDto> VoiceRooms { get; set; }
         [Key(6)]
-        public DirectDto[] Directs { get; set; }
-        //[Key(5)]
-        //public TxTelephoneDto[] Telephones { get; set; }
+        public bool Direct { get; set; }
     }
 }

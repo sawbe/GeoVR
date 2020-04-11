@@ -15,7 +15,7 @@ namespace MessagePack.CryptoDto
         }
 
         public int Count { get { lock (channelStoreLock) { return channelStore.Count; } } }
-        
+
         public void CreateChannel(string channelTag, int receiveSequenceHistorySize = 10)
         {
             lock (channelStoreLock)
@@ -67,6 +67,22 @@ namespace MessagePack.CryptoDto
                     throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
 
                 return channelStore[channelTag].IsReceivedSequenceAllowed(sequenceReceived);
+            }
+        }
+
+        public bool TryGetTransmitKey(string channelTag, CryptoDtoMode mode, out ulong transmitSequence, out ReadOnlySpan<byte> transmitKey)
+        {
+            lock (channelStoreLock)
+            {
+                if (!channelStore.ContainsKey(channelTag))
+                {
+                    transmitSequence = 0;
+                    transmitKey = null;
+                    return false;
+                }
+
+                transmitKey = channelStore[channelTag].GetTransmitKey(mode, out transmitSequence);
+                return true;
             }
         }
 

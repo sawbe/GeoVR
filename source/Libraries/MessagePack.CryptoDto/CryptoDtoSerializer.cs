@@ -24,23 +24,23 @@ namespace MessagePack.CryptoDto.Managed
         public static byte[] Pack(CryptoDtoChannelStore channelStore, string channelTag, CryptoDtoMode mode, byte[] dtoNameBuffer, byte[] dtoBuffer)
         {
             var transmitKey = channelStore.GetTransmitKey(channelTag, mode, out ulong sequenceToSend);
-            return Pack(channelTag, mode, transmitKey, sequenceToSend, dtoNameBuffer, dtoBuffer);
+            return Pack(channelTag, transmitKey, sequenceToSend, mode, dtoNameBuffer, dtoBuffer);
         }
 
         public static byte[] Pack(CryptoDtoChannel channel, CryptoDtoMode mode, byte[] dtoNameBuffer, byte[] dtoBuffer)
         {
             var transmitKey = channel.GetTransmitKey(mode, out ulong sequenceToSend);
-            return Pack(channel.ChannelTag, mode, transmitKey, sequenceToSend, dtoNameBuffer, dtoBuffer);
+            return Pack(channel.ChannelTag, transmitKey, sequenceToSend, mode, dtoNameBuffer, dtoBuffer);
         }
 
         private static byte[] Serialise<T>(string channelTag, CryptoDtoMode mode, ReadOnlySpan<byte> transmitKey, ulong sequenceToBeSent, T dto)
         {
             byte[] dtoNameBuffer = GetDtoNameBytes<T>();
             byte[] dtoBuffer = MessagePackSerializer.Serialize(dto);
-            return Pack(channelTag, mode, transmitKey, sequenceToBeSent, dtoNameBuffer, dtoBuffer);
+            return Pack(channelTag, transmitKey, sequenceToBeSent, mode, dtoNameBuffer, dtoBuffer);
         }
-
-        private static byte[] Pack(string channelTag, CryptoDtoMode mode, ReadOnlySpan<byte> transmitKey, ulong sequenceToBeSent, byte[] dtoNameBuffer, byte[] dtoBuffer)
+        //Only change this to return ReadOnlySpan<byte> when UdpClient has a send method that accepts spans
+        public static byte[] Pack(string channelTag, ReadOnlySpan<byte> transmitKey, ulong sequenceToBeSent, CryptoDtoMode mode, byte[] dtoNameBuffer, byte[] dtoBuffer)
         {
             CryptoDtoHeaderDto header = new CryptoDtoHeaderDto
             {
