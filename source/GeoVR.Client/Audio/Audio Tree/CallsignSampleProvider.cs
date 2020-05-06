@@ -1,4 +1,5 @@
 ﻿using Concentus.Structs;
+using GeoVR.Client.Audio;
 using GeoVR.Shared;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -56,6 +57,7 @@ namespace GeoVR.Client
         private readonly ResourceSoundSampleProvider acBusNoise;
 
         private readonly SimpleCompressorEffect simpleCompressorEffect;
+        private readonly LimiterEffect limiterEffect;
         private readonly EqualizerSampleProvider voiceEq;
         private readonly BufferedWaveProvider audioInput;
         private readonly short[] decoderShortBuffer;
@@ -94,8 +96,10 @@ namespace GeoVR.Client
             simpleCompressorEffect.Enabled = true;
             simpleCompressorEffect.MakeUpGain = -5.5;
 
+            limiterEffect = new LimiterEffect(simpleCompressorEffect);
+
             // Create the voice EQ
-            voiceEq = new EqualizerSampleProvider(simpleCompressorEffect, AudioConfig.Instance.VhfEqualizer);
+            voiceEq = new EqualizerSampleProvider(limiterEffect, AudioConfig.Instance.VhfEqualizer);
 
             BypassEffects = false;
             DistanceRatio = 1;
