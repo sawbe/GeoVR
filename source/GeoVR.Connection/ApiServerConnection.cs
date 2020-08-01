@@ -20,7 +20,6 @@ namespace GeoVR.Connection
         private string jwt;
         private string username;
         private string password;
-        private Guid networkVersion;
         private string client;
         private DateTime expiryLocalUtc;
         private TimeSpan serverToUserOffset;
@@ -38,16 +37,15 @@ namespace GeoVR.Connection
             logger.Debug(nameof(ApiServerConnection) + " instantiated");
         }
 
-        public async Task Connect(string username, string password, Guid networkVersion, string client)     //Client is something like "vPilot 2.2.3"
+        public async Task Connect(string username, string password, string client)     //Client is something like "vPilot 2.2.3"
         {
             this.username = username;
             this.password = password;
-            this.networkVersion = networkVersion;
             this.client = client;
             var watch = Stopwatch.StartNew();
             var restClient = new RestClient(address) { Timeout = timeout };
             var request = new RestRequest("api/v1/auth", Method.POST, DataFormat.Json);
-            request.AddJsonBody(new PostUserRequestDto() { Username = username, Password = password, NetworkVersion = networkVersion, Client = client });
+            request.AddJsonBody(new PostUserRequestDto() { Username = username, Password = password, Client = client });
             IRestResponse response = await restClient.ExecuteTaskAsync(request);
             watch.Stop();
             logger.Debug("POST api/v1/auth (" + watch.ElapsedMilliseconds + "ms)");
@@ -250,7 +248,7 @@ namespace GeoVR.Connection
         {
             if (DateTime.UtcNow > expiryLocalUtc.AddMinutes(-5))
             {
-                await Connect(username, password, networkVersion, client);
+                await Connect(username, password, client);
             }
         }
 

@@ -16,7 +16,6 @@ namespace GeoVR.Connection
 {
     public class ClientConnection
     {
-        private readonly Guid networkVersion = new Guid("3a5ddc6d-cf5d-4319-bd0e-d184f772db80");
         Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         //Data
@@ -63,7 +62,7 @@ namespace GeoVR.Connection
 
             connection.Username = username;
             connection.Callsign = callsign;
-            await connection.ApiServerConnection.Connect(username, password, networkVersion, client);
+            await connection.ApiServerConnection.Connect(username, password, client);
 
             await GetVoiceCredentials(callsign);
             await Task.Run(() => ConnectToVoiceServer());

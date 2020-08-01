@@ -9,7 +9,6 @@ namespace GeoVR.Shared
     {
         public string Username { get; set; }
         public string Password { get; set; }
-        public Guid NetworkVersion { get; set; }
         public string Client { get; set; }
     }
 }
