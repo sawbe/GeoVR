@@ -2,7 +2,7 @@
 using MessagePack.CryptoDto;
 using System.Collections.Generic;
 
-namespace GeoVR.Shared.DTOs
+namespace GeoVR.Shared
 {
     [MessagePackObject]
     [CryptoDto(ShortDtoNames.RadioRxDto)]

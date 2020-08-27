@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using MessagePack.CryptoDto;
 
-namespace GeoVR.Shared.DTOs
+namespace GeoVR.Shared
 {
     [MessagePackObject]
     [CryptoDto(ShortDtoNames.RadioTxDto)]

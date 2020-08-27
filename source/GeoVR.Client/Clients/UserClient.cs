@@ -124,7 +124,7 @@ namespace GeoVR.Client
                 {
                     if (Connection.IsConnected)
                     {
-                        Connection.VoiceServerTransmitQueue.Add(new AudioTxDto()
+                        Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
                         {
                             Callsign = Callsign,
                             SequenceCounter = e.SequenceCounter,
@@ -140,7 +140,7 @@ namespace GeoVR.Client
                 {
                     if (Connection.IsConnected)
                     {
-                        Connection.VoiceServerTransmitQueue.Add(new AudioTxDto()
+                        Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
                         {
                             Callsign = Callsign,
                             SequenceCounter = e.SequenceCounter,
@@ -300,12 +300,12 @@ namespace GeoVR.Client
                 {
                     switch (data.GetType().Name)
                     {
-                        case nameof(AudioRxDto):
+                        case nameof(RadioRxDto):
                             {
-                                var dto = (AudioRxDto)data;
+                                var dto = (RadioRxDto)data;
                                 soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
-                                if (logger.IsTraceEnabled)
-                                    logger.Trace(dto.ToDebugString());
+                                //if (logger.IsTraceEnabled)
+                                //    logger.Trace(dto.ToDebugString());
                                 break;
                             }
                         case nameof(CallRequestDto):

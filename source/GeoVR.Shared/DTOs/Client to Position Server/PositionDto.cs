@@ -1,10 +1,15 @@
 ﻿using MessagePack;
 
-namespace GeoVR.Shared.DTOs
+namespace GeoVR.Shared
 {
     [MessagePackObject]
     public class PositionDto
     {
+        [IgnoreMember]
+        public const string TypeNameConst = ShortDtoNames.PositionDto;
+        [IgnoreMember]
+        public string TypeName { get { return TypeNameConst; } }
+
         [Key(0)]
         public string Callsign { get; set; }
         /// <summary>

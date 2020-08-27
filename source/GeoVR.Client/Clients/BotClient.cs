@@ -91,7 +91,7 @@ namespace GeoVR.Client
 
                 if (Connection.IsConnected)
                 {
-                    Connection.VoiceServerTransmitQueue.Add(new AudioTxDto()
+                    Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
                     {
                         Callsign = Callsign,
                         SequenceCounter = audioSequenceCounter++,
@@ -110,7 +110,7 @@ namespace GeoVR.Client
             byte[] trimmedBuffRemainder = new byte[lenRemainder];
             Buffer.BlockCopy(encodedDataBuffer, 0, trimmedBuffRemainder, 0, lenRemainder);
 
-            Connection.VoiceServerTransmitQueue.Add(new AudioTxDto()
+            Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
             {
                 Callsign = Callsign,
                 SequenceCounter = audioSequenceCounter++,
