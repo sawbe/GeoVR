@@ -114,7 +114,10 @@ namespace MessagePack.CryptoDto.Managed
             if (!dtoNameCache.ContainsKey(dtoType))
             {
                 if (Attribute.IsDefined(dtoType, CryptoDtoAttributeType))
-                    dtoNameCache[dtoType] = Encoding.UTF8.GetBytes(((CryptoDtoAttribute)dtoType.GetCustomAttributes(CryptoDtoAttributeType, false)[0]).ShortDtoName);
+                {
+                    var shortDtoName = ((CryptoDtoAttribute)dtoType.GetCustomAttributes(CryptoDtoAttributeType, false)[0]).ShortDtoName;
+                    dtoNameCache[dtoType] = Encoding.UTF8.GetBytes(shortDtoName);
+                }
                 else
                     dtoNameCache[dtoType] = Encoding.UTF8.GetBytes(dtoType.Name);
             }
