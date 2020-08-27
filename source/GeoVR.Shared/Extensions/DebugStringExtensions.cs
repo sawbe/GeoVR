@@ -28,7 +28,27 @@ namespace GeoVR.Shared
                 "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + "}")) +
                 "]";
         }
-        
+
+        public static string ToDebugString(this RadioRxDto dto)
+        {
+            return nameof(RadioRxDto) +
+                " [Callsign: " + dto.Callsign +
+                "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
+                "] [Last Packet: " + dto.LastPacket +
+                "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + " " + x.DistanceRatio.ToString() + "}")) +
+                "]";
+        }
+
+        public static string ToDebugString(this RadioTxDto dto)
+        {
+            return nameof(RadioTxDto) +
+                " [Callsign: " + dto.Callsign +
+                "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
+                "] [Last Packet: " + dto.LastPacket +
+                "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + "}")) +
+                "]";
+        }
+
         //public static string ToDebugString(this AudioOnVoiceRoomDto dto)
         //{
         //    return nameof(AudioOnVoiceRoomDto) +

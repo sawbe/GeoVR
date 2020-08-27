@@ -304,8 +304,8 @@ namespace GeoVR.Client
                             {
                                 var dto = (RadioRxDto)data;
                                 soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
-                                //if (logger.IsTraceEnabled)
-                                //    logger.Trace(dto.ToDebugString());
+                                if (logger.IsTraceEnabled)
+                                    logger.Trace(dto.ToDebugString());
                                 break;
                             }
                         case nameof(CallRequestDto):
