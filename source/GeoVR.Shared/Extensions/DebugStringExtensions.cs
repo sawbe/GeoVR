@@ -9,25 +9,25 @@ namespace GeoVR.Shared
 {
     public static class DebugStringExtensions
     {
-        public static string ToDebugString(this AudioRxDto dto)
-        {
-            return nameof(AudioRxDto) +
-                " [Callsign: " + dto.Callsign +
-                "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
-                "] [Last Packet: " + dto.LastPacket +
-                "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + " " + x.DistanceRatio.ToString() + "}")) +
-                "]";
-        }
+        //public static string ToDebugString(this AudioRxDto dto)
+        //{
+        //    return nameof(AudioRxDto) +
+        //        " [Callsign: " + dto.Callsign +
+        //        "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
+        //        "] [Last Packet: " + dto.LastPacket +
+        //        "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + " " + x.DistanceRatio.ToString() + "}")) +
+        //        "]";
+        //}
 
-        public static string ToDebugString(this AudioTxDto dto)
-        {
-            return nameof(AudioTxDto) +
-                " [Callsign: " + dto.Callsign +
-                "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
-                "] [Last Packet: " + dto.LastPacket +
-                "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + "}")) +
-                "]";
-        }
+        //public static string ToDebugString(this AudioTxDto dto)
+        //{
+        //    return nameof(AudioTxDto) +
+        //        " [Callsign: " + dto.Callsign +
+        //        "] [SequenceCounter: " + dto.SequenceCounter.ToString() +
+        //        "] [Last Packet: " + dto.LastPacket +
+        //        "] [TransceiverIDs: " + string.Join(",", dto.Transceivers.Select(x => "{" + x.ID.ToString() + "}")) +
+        //        "]";
+        //}
 
         public static string ToDebugString(this RadioRxDto dto)
         {

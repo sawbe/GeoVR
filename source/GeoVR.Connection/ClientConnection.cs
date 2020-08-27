@@ -267,10 +267,10 @@ namespace GeoVR.Connection
                         {
                             switch (obj.GetType().Name)
                             {
-                                case nameof(AudioTxDto):
+                                case nameof(RadioTxDto):
                                     if (logger.IsTraceEnabled)
-                                        logger.Trace(((AudioTxDto)obj).ToDebugString());
-                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (AudioTxDto)obj);
+                                        logger.Trace(((RadioTxDto)obj).ToDebugString());
+                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (RadioTxDto)obj);
                                     udpClient.Send(dataBytes, dataBytes.Length, server);
                                     connection.VoiceServerBytesSent += dataBytes.Length;
                                     break;
@@ -339,10 +339,9 @@ namespace GeoVR.Connection
                     //Crypto DTO stream is only concerned with duplicated or old packets, it doesn't discard out-of-order. Need to find out if Opus discards OOO packets.                    
                     switch (deserializer.GetDtoName())
                     {
-                        case nameof(AudioRxDto):
-                        case ShortDtoNames.AudioRxDto:
+                        case RadioRxDto.TypeNameConst:
                             {
-                                var dto = deserializer.GetDto<AudioRxDto>();
+                                var dto = deserializer.GetDto<RadioRxDto>();
                                 if (connection.ReceiveAudio && connection.IsConnected)
                                     receiveQueue.Add(dto);
                                 break;
