@@ -336,8 +336,14 @@ namespace GeoVR.Connection
                         logger.Debug("Duplicate or old packet received");
                         continue;       //If a duplicate packet received (because it's UDP) - ignore it
                     }
-                    //Crypto DTO stream is only concerned with duplicated or old packets, it doesn't discard out-of-order. Need to find out if Opus discards OOO packets.                    
-                    switch (deserializer.GetDtoName())
+                    //Crypto DTO stream is only concerned with duplicated or old packets, it doesn't discard out-of-order. Need to find out if Opus discards OOO packets.  
+
+                    var dtoName = deserializer.GetDtoName();
+
+                    if (dtoName == "AR")
+                        dtoName = RadioRxDto.TypeNameConst;     //The server will be sending RadioRxDto as "AR" to maintain backwards compatibility for a year or two until old clients get updated.
+
+                    switch (dtoName)
                     {
                         case RadioRxDto.TypeNameConst:
                             {
