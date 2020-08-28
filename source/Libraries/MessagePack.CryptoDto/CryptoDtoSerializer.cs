@@ -11,7 +11,8 @@ namespace MessagePack.CryptoDto.Managed
     {
         public static byte[] Serialize<T>(CryptoDtoChannelStore channelStore, string channelTag, CryptoDtoMode mode, T obj)
         {
-            var transmitKey = channelStore.GetTransmitKey(channelTag, mode, out ulong sequenceToSend);
+            var channel = channelStore.GetChannel(channelTag);
+            var transmitKey = channel.GetTransmitKey(mode, out ulong sequenceToSend);
             return Serialise(channelTag, mode, transmitKey, sequenceToSend, obj);
         }
 
@@ -23,7 +24,8 @@ namespace MessagePack.CryptoDto.Managed
 
         public static byte[] Pack(CryptoDtoChannelStore channelStore, string channelTag, CryptoDtoMode mode, byte[] dtoNameBuffer, byte[] dtoBuffer)
         {
-            var transmitKey = channelStore.GetTransmitKey(channelTag, mode, out ulong sequenceToSend);
+            var channel = channelStore.GetChannel(channelTag);
+            var transmitKey = channel.GetTransmitKey(mode, out ulong sequenceToSend);
             return Pack(channelTag, transmitKey, sequenceToSend, mode, dtoNameBuffer, dtoBuffer);
         }
 
@@ -123,13 +125,5 @@ namespace MessagePack.CryptoDto.Managed
             }
             return dtoNameCache[dtoType];
         }
-
-        //private static ConcurrentDictionary<string, byte[]> channelTagCache = new ConcurrentDictionary<string, byte[]>();
-        //private static byte[] GetChannelTagBytes(string channelTag)
-        //{
-        //    if (!channelTagCache.ContainsKey(channelTag))
-        //        channelTagCache[channelTag] = Encoding.UTF8.GetBytes(channelTag);
-        //    return channelTagCache[channelTag];
-        //}
     }
 }

@@ -16,6 +16,11 @@ namespace MessagePack.CryptoDto
 
         public int Count { get { lock (channelStoreLock) { return channelStore.Count; } } }
 
+        /// <summary>
+        /// Will throw CryptographicException if channel already exists
+        /// </summary>
+        /// <param name="channelTag"></param>
+        /// <returns></returns>
         public void CreateChannel(string channelTag, int receiveSequenceHistorySize = 10)
         {
             lock (channelStoreLock)
@@ -26,77 +31,66 @@ namespace MessagePack.CryptoDto
             }
         }
 
-        public CryptoDtoChannelConfigDto GetRemoteEndpointChannelConfig(string channelTag)
+        public bool TryCreateChannel(string channelTag, int receiveSequenceHistorySize = 10)
+        {
+            lock (channelStoreLock)
+            {
+                if (channelStore.ContainsKey(channelTag))
+                    return false;
+                channelStore[channelTag] = new CryptoDtoChannel(channelTag, receiveSequenceHistorySize);
+                return true;
+            }
+        }
+
+        public bool TryCreateChannel(string channelTag, out CryptoDtoChannel channel, int receiveSequenceHistorySize = 10)
+        {
+            lock (channelStoreLock)
+            {
+                if (channelStore.ContainsKey(channelTag))
+                {
+                    channel = null;
+                    return false;
+                }
+                channelStore[channelTag] = new CryptoDtoChannel(channelTag, receiveSequenceHistorySize);
+                channel = channelStore[channelTag];
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Will throw CryptographicException if channel does not exist
+        /// </summary>
+        /// <param name="channelTag"></param>
+        /// <returns></returns>
+        public CryptoDtoChannel GetChannel(string channelTag)
         {
             lock (channelStoreLock)
             {
                 if (!channelStore.ContainsKey(channelTag))
                     throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
-
-                return channelStore[channelTag].GetRemoteEndpointChannelConfig();
+                return channelStore[channelTag];
             }
         }
 
-        public ReadOnlySpan<byte> GetReceiveKey(string channelTag, CryptoDtoMode mode)
-        {
-            lock (channelStoreLock)
-            {
-                if (!channelStore.ContainsKey(channelTag))
-                    throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
-
-                return channelStore[channelTag].GetReceiveKey(mode);
-            }
-        }
-
-        public void CheckReceivedSequence(string channelTag, ulong sequenceReceived)
-        {
-            lock (channelStoreLock)
-            {
-                if (!channelStore.ContainsKey(channelTag))
-                    throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
-
-                channelStore[channelTag].CheckReceivedSequence(sequenceReceived);
-            }
-        }
-
-        public bool IsReceivedSequenceAllowed(string channelTag, ulong sequenceReceived)
-        {
-            lock (channelStoreLock)
-            {
-                if (!channelStore.ContainsKey(channelTag))
-                    throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
-
-                return channelStore[channelTag].IsReceivedSequenceAllowed(sequenceReceived);
-            }
-        }
-
-        public bool TryGetTransmitKey(string channelTag, CryptoDtoMode mode, out ulong transmitSequence, out ReadOnlySpan<byte> transmitKey)
+        public bool TryGetChannel(string channelTag, out CryptoDtoChannel channel)
         {
             lock (channelStoreLock)
             {
                 if (!channelStore.ContainsKey(channelTag))
                 {
-                    transmitSequence = 0;
-                    transmitKey = null;
+                    channel = null;
                     return false;
                 }
 
-                transmitKey = channelStore[channelTag].GetTransmitKey(mode, out transmitSequence);
+                channel = channelStore[channelTag];
                 return true;
             }
         }
 
-        public ReadOnlySpan<byte> GetTransmitKey(string channelTag, CryptoDtoMode mode, out ulong transmitSequence)
-        {
-            lock (channelStoreLock)
-            {
-                if (!channelStore.ContainsKey(channelTag))
-                    throw new CryptographicException("Key tag does not exist in store. (" + channelTag + ")");
-
-                return channelStore[channelTag].GetTransmitKey(mode, out transmitSequence);
-            }
-        }
-
+        /// <summary>
+        /// Will throw CryptographicException if channel does not exist
+        /// </summary>
+        /// <param name="channelTag"></param>
         public void DeleteChannel(string channelTag)
         {
             lock (channelStoreLock)
@@ -107,12 +101,15 @@ namespace MessagePack.CryptoDto
             }
         }
 
-        public void DeleteChannelIfExists(string channelTag)
+        public bool TryDeleteChannel(string channelTag)
         {
             lock (channelStoreLock)
             {
-                if (channelStore.ContainsKey(channelTag))
-                    channelStore.Remove(channelTag);
+                if (!channelStore.ContainsKey(channelTag))
+                    return false;
+
+                channelStore.Remove(channelTag);
+                return true;
             }
         }
     }
