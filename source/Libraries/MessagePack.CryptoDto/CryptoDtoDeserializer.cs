@@ -38,21 +38,14 @@ namespace MessagePack.CryptoDto.Managed
 
         public ref struct Deserializer
         {
-            readonly ushort headerLength;
-            readonly CryptoDtoHeaderDto header;
-
-            readonly int dtoNameLength;
-            ReadOnlySpan<byte> dtoNameBuffer;
-
-            readonly int dataLength;
-            ReadOnlySpan<byte> dataBuffer;
-
-            readonly bool sequenceValid;
+            private readonly CryptoDtoHeaderDto header;
+            private readonly ReadOnlySpan<byte> dtoNameBuffer;
+            private readonly ReadOnlySpan<byte> dataBuffer;
+            private readonly bool sequenceValid;
 
             internal Deserializer(CryptoDtoChannel channel, ushort headerLength, CryptoDtoHeaderDto header, ReadOnlySpan<byte> bytes, bool ignoreSequence)
             {
                 sequenceValid = false;
-                this.headerLength = headerLength;
                 this.header = header;
 
                 if (header.ChannelTag != channel.ChannelTag)
@@ -82,14 +75,14 @@ namespace MessagePack.CryptoDto.Managed
                                 sequenceValid = true;
                             }
 
-                            dtoNameLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(decryptedPayload));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
+                            var dtoNameLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(decryptedPayload));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
 
                             if (decryptedPayload.Length < (2 + dtoNameLength))
                                 throw new CryptographicException("Not enough bytes to process packet. (2) " + dtoNameLength + " " + decryptedPayload.Length);
 
                             dtoNameBuffer = decryptedPayload.Slice(2, dtoNameLength);
 
-                            dataLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(decryptedPayload.Slice(2 + dtoNameLength, 2)));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
+                            var dataLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(decryptedPayload.Slice(2 + dtoNameLength, 2)));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
 
                             if (decryptedPayload.Length < (2 + dtoNameLength + 2 + dataLength))
                                 throw new CryptographicException("Not enough bytes to process packet. (3) " + dataLength + " " + decryptedPayload.Length);
