@@ -8,7 +8,7 @@ namespace GeoVR.Shared
     {
         public const string HeartbeatDto = "H";
         public const string HeartbeatAckDto = "HA";
-        public const string RadioTxDto = "RT";
+        public const string RadioTxDto = "AT"; //"RT";
         public const string RadioRxDto = "RR";
         public const string CallRequest = "CQ";
         public const string CallResponse = "CR";    

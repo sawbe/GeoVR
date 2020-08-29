@@ -255,7 +255,7 @@ namespace GeoVR.Connection
             BlockingCollection<IMsgPackTypeName> transmitQueue)
         {
             logger.Debug(nameof(TaskVoiceServerTransmit) + " started");
-
+            CryptoDtoSerializer serializer = new CryptoDtoSerializer();
             try
             {
                 byte[] dataBytes;
@@ -270,28 +270,28 @@ namespace GeoVR.Connection
                                 case nameof(RadioTxDto):
                                     if (logger.IsTraceEnabled)
                                         logger.Trace(((RadioTxDto)obj).ToDebugString());
-                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (RadioTxDto)obj);
+                                    dataBytes = serializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (RadioTxDto)obj);
                                     udpClient.Send(dataBytes, dataBytes.Length, server);
                                     connection.VoiceServerBytesSent += dataBytes.Length;
                                     break;
                                 case nameof(CallRequestDto):
                                     if (logger.IsTraceEnabled)
                                         logger.Trace("Sending CallRequestDto");
-                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (CallRequestDto)obj);
+                                    dataBytes = serializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (CallRequestDto)obj);
                                     udpClient.Send(dataBytes, dataBytes.Length, server);
                                     connection.VoiceServerBytesSent += dataBytes.Length;
                                     break;
                                 case nameof(CallResponseDto):
                                     if (logger.IsTraceEnabled)
                                         logger.Trace("Sending CallResponseDto");
-                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (CallResponseDto)obj);
+                                    dataBytes = serializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (CallResponseDto)obj);
                                     udpClient.Send(dataBytes, dataBytes.Length, server);
                                     connection.VoiceServerBytesSent += dataBytes.Length;
                                     break;
                                 case nameof(HeartbeatDto):
                                     if (logger.IsTraceEnabled)
                                         logger.Trace("Sending voice server heartbeat");
-                                    dataBytes = CryptoDtoSerializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (HeartbeatDto)obj);
+                                    dataBytes = serializer.Serialize(connection.VoiceCryptoChannel, CryptoDtoMode.ChaCha20Poly1305, (HeartbeatDto)obj);
                                     udpClient.Send(dataBytes, dataBytes.Length, server);
                                     connection.VoiceServerBytesSent += dataBytes.Length;
                                     break;
