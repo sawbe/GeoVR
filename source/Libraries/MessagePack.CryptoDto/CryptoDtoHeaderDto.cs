@@ -1,7 +1,7 @@
 ﻿namespace MessagePack.CryptoDto
 {
     [MessagePackObject]
-    public class CryptoDtoHeaderDto
+    public struct CryptoDtoHeaderDto        //Changed this to struct - uses less memory on MessagePackSerializer.Deserialize
     {
         [Key(0)]
         public string ChannelTag { get; set; }

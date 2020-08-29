@@ -1,13 +1,8 @@
-﻿#if NETCOREAPP3_0 || NETCOREAPP3_1 || NETCOREAPP5_0
+﻿#if INTRINSICS
 #pragma warning disable IDE0007 // Use implicit type
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NaCl.Core.Base
 {
