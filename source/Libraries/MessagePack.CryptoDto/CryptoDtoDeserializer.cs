@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Toolkit.HighPerformance.Buffers;
+using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
@@ -45,6 +46,8 @@ namespace MessagePack.CryptoDto.Managed
         public static Deserializer Deserialize(IBufferWriter<byte> plaintextBuffer, CryptoDtoChannel channel, ReadOnlyMemory<byte> bytes)
         {
             var header = Deserializer.GetHeader(bytes, out ushort headerLength);
+            if (header.ChannelTag != channel.ChannelTag)
+                throw new CryptographicException("Channel Tag doesn't match provided Channel");
             return new Deserializer(channel, headerLength, header, bytes.Span, false, plaintextBuffer);
         }
 
@@ -57,6 +60,8 @@ namespace MessagePack.CryptoDto.Managed
         public static Deserializer DeserializeIgnoreSequence(IBufferWriter<byte> plaintextBuffer, CryptoDtoChannel channel, ReadOnlyMemory<byte> bytes)            //This is used for UDP channels where duplication is possible and the overhead of CryptographicException isn't acceptable. Use IsSequenceValid() in code to ignore the UDP packet.
         {
             var header = Deserializer.GetHeader(bytes, out ushort headerLength);
+            if (header.ChannelTag != channel.ChannelTag)
+                throw new CryptographicException("Channel Tag doesn't match provided Channel");
             return new Deserializer(channel, headerLength, header, bytes.Span, true, plaintextBuffer);
         }
 
@@ -71,9 +76,6 @@ namespace MessagePack.CryptoDto.Managed
             {
                 sequenceValid = false;
                 channelTag = header.ChannelTag;
-
-                if (header.ChannelTag != channel.ChannelTag)
-                    throw new CryptographicException("Channel Tag doesn't match provided Channel");
 
                 switch (header.Mode)
                 {
@@ -153,6 +155,13 @@ namespace MessagePack.CryptoDto.Managed
             public byte[] GetDtoBytes()
             {
                 return dtoBuffer.ToArray();
+            }
+
+            public MemoryOwner<byte> GetDtoMemory()
+            {
+                var memory = MemoryOwner<byte>.Allocate(dtoBuffer.Length);
+                dtoBuffer.CopyTo(memory.Span);
+                return memory;
             }
 
             public bool IsSequenceValid()           //Use this if the "Ignore Sequence" option was used for UDP channels
