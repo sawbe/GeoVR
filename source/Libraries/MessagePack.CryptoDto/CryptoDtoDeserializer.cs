@@ -129,7 +129,7 @@ namespace MessagePack.CryptoDto.Managed
                     throw new CryptographicException("Not enough bytes to process packet.");
 
                 var headerDataBuffer = bytes.Slice(2, headerLength);
-                return MessagePackSerializer.Deserialize<CryptoDtoHeaderDto>(headerDataBuffer);
+                return MessagePackSerializer.Deserialize<CryptoDtoHeaderDto>(headerDataBuffer);     //This allocates heap memory for the string. The struct itself is on the stack. Wait for https://github.com/neuecc/MessagePack-CSharp/issues/107
             }
 
             public string GetChannelTag()
