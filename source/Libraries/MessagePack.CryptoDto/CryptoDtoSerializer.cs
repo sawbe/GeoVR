@@ -82,7 +82,7 @@ namespace MessagePack.CryptoDto.Managed
             Pack(output, header, channel.TransmitChaCha20Poly1305, dtoNameBuffer, dtoBuffer);
         }
 
-        //Can we change the ChaCha20Poly1305 input to CryptoDtoChannel?
+        //Can we change the ChaCha20Poly1305 input to some kind of ICrypto interface or action with 'Encrypt' and 'Decrypt'?
         private void Pack(IBufferWriter<byte> output, CryptoDtoHeaderDto header, ChaCha20Poly1305 crypto, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
         {
             lock (bufferLock)
