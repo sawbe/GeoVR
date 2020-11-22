@@ -13,18 +13,18 @@ namespace MessagePack.CryptoDto
 
         private readonly byte[] aeadReceiveKey;
 
-        private ulong[] receiveSequenceHistory;
+        private readonly ulong[] receiveSequenceHistory;
         private int receiveSequenceHistoryDepth;
-        private int receiveSequenceSizeMaxSize;
+        private readonly int receiveSequenceSizeMaxSize;
 
         public string ChannelTag { get; private set; }
         public DateTime LastTransmitUtc { get; private set; }
         public DateTime LastReceiveUtc { get; private set; }
 
         private ChaCha20Poly1305 transmit = null;
-        public ChaCha20Poly1305 TransmitChaCha20Poly1305 { get { if (transmit == null) { transmit = new ChaCha20Poly1305(aeadTransmitKey); } return transmit; } }
+        internal ChaCha20Poly1305 TransmitChaCha20Poly1305 { get { if (transmit == null) { transmit = new ChaCha20Poly1305(aeadTransmitKey); } return transmit; } }
         private ChaCha20Poly1305 receive = null;
-        public ChaCha20Poly1305 ReceiveChaCha20Poly1305 { get { if (receive == null) { receive = new ChaCha20Poly1305(aeadReceiveKey); } return receive; } }
+        internal ChaCha20Poly1305 ReceiveChaCha20Poly1305 { get { if (receive == null) { receive = new ChaCha20Poly1305(aeadReceiveKey); } return receive; } }
 
         public CryptoDtoChannel(string channelTag, int receiveSequenceHistorySize = 10)
         {
@@ -67,7 +67,7 @@ namespace MessagePack.CryptoDto
             {
                 return new CryptoDtoChannelConfigDto()
                 {
-                    ChannelTag = string.Copy(ChannelTag),
+                    ChannelTag = ChannelTag,
                     AeadReceiveKey = aeadTransmitKey.ToArray(),
                     AeadTransmitKey = aeadReceiveKey.ToArray()      //Swap the order for the remote endpoint
                 };

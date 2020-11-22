@@ -7,10 +7,11 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MessagePack.CryptoDto.Managed
+namespace MessagePack.CryptoDto
 {
     public static class CryptoDtoDeserializer
     {
+        #region CryptoDtoChannelStore methods
         public static Deserializer Deserialize(CryptoDtoChannelStore channelStore, ReadOnlyMemory<byte> bytes)
         {
             var plaintextBuffer = new ArrayBufferWriter<byte>();
@@ -36,7 +37,9 @@ namespace MessagePack.CryptoDto.Managed
             var channel = channelStore.GetChannel(header.ChannelTag);
             return new Deserializer(channel, headerLength, header, bytes.Span, true, plaintextBuffer);
         }
+        #endregion
 
+        #region CryptoDtoChannel methods
         public static Deserializer Deserialize(CryptoDtoChannel channel, ReadOnlyMemory<byte> bytes)
         {
             var plaintextBuffer = new ArrayBufferWriter<byte>();
@@ -64,12 +67,13 @@ namespace MessagePack.CryptoDto.Managed
                 throw new CryptographicException("Channel Tag doesn't match provided Channel");
             return new Deserializer(channel, headerLength, header, bytes.Span, true, plaintextBuffer);
         }
+        #endregion
 
         public ref struct Deserializer
         {
             private readonly string channelTag;
             private readonly ReadOnlySpan<byte> dtoNameBuffer;
-            private readonly ReadOnlySpan<byte> dtoBuffer;
+            private readonly ReadOnlyMemory<byte> dtoBuffer;
             private readonly bool sequenceValid;
 
             internal Deserializer(CryptoDtoChannel channel, ushort headerLength, CryptoDtoHeaderDto header, ReadOnlySpan<byte> bytes, bool ignoreSequence, IBufferWriter<byte> plaintextBuffer)
@@ -92,8 +96,8 @@ namespace MessagePack.CryptoDto.Managed
 
                             var aead = channel.ReceiveChaCha20Poly1305;
 
-                            Span<byte> plaintext = plaintextBuffer.GetSpan(aeLength).Slice(0, aeLength);
-                            aead.Decrypt(nonce, ae, tag, plaintext, ad);
+                            Memory<byte> plaintext = plaintextBuffer.GetMemory(aeLength).Slice(0, aeLength);
+                            aead.Decrypt(nonce, ae, tag, plaintext.Span, ad);
 
                             if (ignoreSequence)
                                 sequenceValid = channel.IsReceivedSequenceAllowed(header.Sequence);
@@ -103,14 +107,14 @@ namespace MessagePack.CryptoDto.Managed
                                 sequenceValid = true;
                             }
 
-                            var dtoNameLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(plaintext));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
+                            var dtoNameLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(plaintext.Span));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
 
                             if (plaintext.Length < (2 + dtoNameLength))
                                 throw new CryptographicException("Not enough bytes to process packet. (2) " + dtoNameLength + " " + plaintext.Length);
 
-                            dtoNameBuffer = plaintext.Slice(2, dtoNameLength);
+                            dtoNameBuffer = plaintext.Span.Slice(2, dtoNameLength);
 
-                            var dtoLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(plaintext.Slice(2 + dtoNameLength, 2)));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
+                            var dtoLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(plaintext.Span.Slice(2 + dtoNameLength, 2)));    //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)
 
                             if (plaintext.Length < (2 + dtoNameLength + 2 + dtoLength))
                                 throw new CryptographicException("Not enough bytes to process packet. (3) " + dtoLength + " " + plaintext.Length);
@@ -149,7 +153,7 @@ namespace MessagePack.CryptoDto.Managed
 
             public T GetDto<T>()
             {
-                return MessagePackSerializer.Deserialize<T>(dtoBuffer.ToArray()); //When MessagePack has Span support, tweak this.
+                return MessagePackSerializer.Deserialize<T>(dtoBuffer);
             }
 
             public byte[] GetDtoBytes()
@@ -160,7 +164,7 @@ namespace MessagePack.CryptoDto.Managed
             public MemoryOwner<byte> GetDtoMemory()
             {
                 var memory = MemoryOwner<byte>.Allocate(dtoBuffer.Length);
-                dtoBuffer.CopyTo(memory.Span);
+                dtoBuffer.Span.CopyTo(memory.Span);
                 return memory;
             }
 
