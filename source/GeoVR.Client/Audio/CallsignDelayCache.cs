@@ -5,10 +5,10 @@ namespace GeoVR.Client
 {
     public class CallsignDelayCache
     {
-        private readonly int delayDefault = 60;
+        private readonly int delayDefault = 120;
         private readonly int delayMin = 40;
         private readonly int delayIncrement = 20;
-        private readonly int delayMax = 300;
+        private readonly int delayMax = 500;
 
         //Singleton Pattern
         private static readonly Lazy<CallsignDelayCache> lazy = new Lazy<CallsignDelayCache>(() => new CallsignDelayCache());
