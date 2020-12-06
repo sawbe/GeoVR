@@ -1,16 +1,9 @@
-﻿using Concentus.Enums;
-using Concentus.Structs;
+﻿using GeoVR.Opus;
 using GeoVR.Shared;
 using NAudio.Wave;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
 
 namespace GeoVR.Client
@@ -26,7 +19,7 @@ namespace GeoVR.Client
 
         public BotClient(string apiServer) : base(apiServer)                //Connection.ReceiveAudio = false in the base constructor
         {
-            encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+            encoder = OpusEncoder.Create(sampleRate, 1, Application.Voip);
             encoder.Bitrate = 16 * 1024;
             Connection.ReceiveAudio = false;
         }
@@ -83,11 +76,12 @@ namespace GeoVR.Client
             int bufferOffset = 0;
             for (int i = 0; i < segmentCount; i++)
             {
-                int len = encoder.Encode(waveBuffer, bufferOffset, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+                //int len = encoder.Encode(waveBuffer, bufferOffset, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+                encodedDataBuffer = encoder.Encode(buffer, 1275, out int encodedDataLength);
                 bufferOffset += frameSize;
 
-                byte[] trimmedBuff = new byte[len];
-                Buffer.BlockCopy(encodedDataBuffer, 0, trimmedBuff, 0, len);
+                byte[] trimmedBuff = new byte[encodedDataLength];
+                Buffer.BlockCopy(encodedDataBuffer, 0, trimmedBuff, 0, encodedDataLength);
 
                 if (Connection.IsConnected)
                 {
@@ -106,7 +100,8 @@ namespace GeoVR.Client
             Array.Clear(lastPacketBuffer, 0, frameSize);
             int remainderSamples = waveBuffer.Length - (segmentCount * frameSize);
             Buffer.BlockCopy(waveBuffer, bufferOffset, lastPacketBuffer, 0, remainderSamples);
-            int lenRemainder = encoder.Encode(lastPacketBuffer, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+            //int lenRemainder = encoder.Encode(lastPacketBuffer, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+            encodedDataBuffer = encoder.Encode(buffer, 1275, out int lenRemainder);
             byte[] trimmedBuffRemainder = new byte[lenRemainder];
             Buffer.BlockCopy(encodedDataBuffer, 0, trimmedBuffRemainder, 0, lenRemainder);
 

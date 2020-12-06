@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace GeoVR.Connection
@@ -79,16 +78,6 @@ namespace GeoVR.Connection
         public async Task UpdateCrossCoupleGroups(string callsign, List<CrossCoupleGroupDto> crossCoupleGroups)
         {
             await PostNoResponse("api/v1/users/" + username + "/callsigns/" + callsign + "/crossCoupleGroups", crossCoupleGroups);
-        }
-
-        public async Task UpdateVoiceRooms(string callsign, List<VoiceRoomDto> voiceRooms)
-        {
-            await PostNoResponse("api/v1/users/" + username + "/callsigns/" + callsign + "/voiceRooms", voiceRooms);
-        }
-
-        public async Task UpdateDirectConfiguration(string callsign, DirectConfigurationDto directConfiguration)
-        {
-            await PostNoResponse("api/v1/users/" + username + "/callsigns/" + callsign + "/directConfiguration", directConfiguration);
         }
 
         public void ForceDisconnect()

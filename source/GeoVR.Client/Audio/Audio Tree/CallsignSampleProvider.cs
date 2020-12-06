@@ -1,5 +1,5 @@
-﻿using Concentus.Structs;
-using GeoVR.Client.Audio;
+﻿using GeoVR.Client.Audio;
+using GeoVR.Opus;
 using GeoVR.Shared;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -92,7 +92,7 @@ namespace GeoVR.Client
             audioInput = new BufferedWaveProvider(new WaveFormat(WaveFormat.SampleRate, 16, 1)) { ReadFully = true, BufferLength = new WaveFormat(WaveFormat.SampleRate, 16, 1).AverageBytesPerSecond * 60 };
 
             //Create the compressor
-            simpleCompressorEffect = new SimpleCompressorEffect(new Pcm16BitToSampleProvider(audioInput));
+            simpleCompressorEffect = new SimpleCompressorEffect(new Pcm16BitToSampleProvider(audioInput));          //Artifically increasing signal going into SimpleCompressorEffect didn't trigger audio issue
             simpleCompressorEffect.Enabled = true;
             simpleCompressorEffect.MakeUpGain = -5.5;
 
@@ -161,7 +161,7 @@ namespace GeoVR.Client
             Callsign = callsign;
             CallsignDelayCache.Instance.Initialise(callsign);
             Type = aircraftType;
-            decoder = new OpusDecoder(WaveFormat.SampleRate, 1);
+            decoder = OpusDecoder.Create(WaveFormat.SampleRate, 1);
             InUse = true;
             SetEffects();
             underflow = false;
@@ -181,7 +181,7 @@ namespace GeoVR.Client
             Callsign = callsign;
             CallsignDelayCache.Instance.Initialise(callsign);
             Type = type;
-            decoder = new OpusDecoder(WaveFormat.SampleRate, 1);
+            decoder = OpusDecoder.Create(WaveFormat.SampleRate, 1);
             InUse = true;
             SetEffects(true);
             underflow = true;
@@ -237,13 +237,15 @@ namespace GeoVR.Client
 
         private void DecodeOpus(byte[] opusData)
         {
-            decoder.Decode(opusData, 0, opusData.Length, decoderShortBuffer, 0, frameCount, false);
+            var bytes = decoder.Decode(opusData, opusData.Length, out int decodedLength);
+            if (decodedLength != 1920)
+                throw new Exception("Opus decoded length doesn't match 960");
             //Optimise the following at some point.
             for (int i = 0; i < 960; i++)
             {
-                var bytes = BitConverter.GetBytes(decoderShortBuffer[i]);
-                decoderByteBuffer[i * 2] = bytes[0];
-                decoderByteBuffer[(i * 2) + 1] = bytes[1];
+                //var bytes = BitConverter.GetBytes(decoderShortBuffer[i]);
+                decoderByteBuffer[i * 2] = bytes[i * 2];
+                decoderByteBuffer[(i * 2) + 1] = bytes[(i * 2) + 1];
             }
         }
 

@@ -66,21 +66,5 @@ namespace GeoVR.Client
 
             Connection.ApiServerConnection.UpdateCrossCoupleGroups(Callsign, groups);
         }
-
-        public void UpdateVoiceRooms(List<VoiceRoomDto> voiceRooms)
-        {
-            if (!Connection.IsConnected)
-                throw new Exception("Client not connected");
-
-            Connection.ApiServerConnection.UpdateVoiceRooms(Callsign, voiceRooms);
-        }
-
-        public void UpdateDirectConfiguration(DirectConfigurationDto directConfiguration)
-        {
-            if (!Connection.IsConnected)
-                throw new Exception("Client not connected");
-
-            Connection.ApiServerConnection.UpdateDirectConfiguration(Callsign, directConfiguration);
-        }
     }
 }

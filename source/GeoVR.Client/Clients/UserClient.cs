@@ -1,22 +1,11 @@
-﻿using NAudio.Wave;
+﻿using GeoVR.Shared;
+using NAudio.Wave.SampleProviders;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
-using GeoVR.Shared;
-using NAudio.Wave.SampleProviders;
-using NAudio.Utils;
-using System.Net;
-using System.Net.Sockets;
-using RestSharp;
-using Concentus.Structs;
-using Concentus.Enums;
-using System.Diagnostics;
-using NLog;
 
 namespace GeoVR.Client
 {
@@ -47,7 +36,7 @@ namespace GeoVR.Client
         {
             set
             {
-                if (value > 18) { value = 18; }
+                if (value > 6) { value = 6; }
                 if (value < -18) { value = -18; }
                 inputVolumeDb = value;
                 input.Volume = (float)System.Math.Pow(10, value / 20);
@@ -63,7 +52,7 @@ namespace GeoVR.Client
         {
             set
             {
-                if (value > 18) { value = 18; }
+                if (value > 0) { value = 0; }
                 if (value < -60) { value = -60; }
                 outputVolume = (float)System.Math.Pow(10, value / 20);
                 if (outputSampleProvider != null)

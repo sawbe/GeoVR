@@ -1,11 +1,6 @@
-﻿using Concentus.Enums;
-using Concentus.Structs;
+﻿using GeoVR.Opus;
 using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GeoVR.Client
 {
@@ -29,7 +24,7 @@ namespace GeoVR.Client
         public Input(int sampleRate)
         {
             this.sampleRate = sampleRate;
-            encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+            encoder = OpusEncoder.Create(sampleRate, 1, Application.Voip);
             encoder.Bitrate = 16 * 1024;
         }
 
@@ -94,7 +89,8 @@ namespace GeoVR.Client
                 samples[i] = (short)value;
             }
 
-            encodedDataLength = encoder.Encode(samples, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+            encodedDataBuffer = encoder.Encode(e.Buffer, 1275, out int encodedDataLength);
+            //encodedDataLength = encoder.Encode(samples, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
             OpusBytesEncoded += encodedDataLength;
 
             //Calculate max and raise event if needed
