@@ -195,7 +195,7 @@ namespace GeoVR.Client
 
         private void SetHfNoise()
         {
-            if (Frequency < hfFrequencyUpperLimit && !Mute)
+            if ((Frequency>0) && (Frequency < hfFrequencyUpperLimit && !Mute))
             {
                 hfWhiteNoise.Gain = hfWhiteNoiseGain;
             }
