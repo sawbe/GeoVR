@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MessagePack.CryptoDto.Managed
+namespace MessagePack.CryptoDto
 {
     public class CryptoDtoSerializer
     {
@@ -64,21 +64,6 @@ namespace MessagePack.CryptoDto.Managed
                 Pack(output, channel, mode, dtoNameBuffer, dtoBuffer.WrittenSpan);
             }
         }
-
-        //[Obsolete]
-        //public byte[] Pack(CryptoDtoChannelStore channelStore, string channelTag, CryptoDtoMode mode, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
-        //{
-        //    var channel = channelStore.GetChannel(channelTag);
-        //    return Pack(channel, mode, dtoNameBuffer, dtoBuffer);
-        //}
-
-        //[Obsolete]
-        //public byte[] Pack(CryptoDtoChannel channel, CryptoDtoMode mode, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
-        //{
-        //    ArrayBufferWriter<byte> arrayBufferWriter = new ArrayBufferWriter<byte>();
-        //    Pack(arrayBufferWriter, channel, mode, dtoNameBuffer, dtoBuffer);
-        //    return arrayBufferWriter.WrittenSpan.ToArray();
-        //}
 
         public void Pack(IBufferWriter<byte> output, CryptoDtoChannel channel, CryptoDtoMode mode, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
         {
