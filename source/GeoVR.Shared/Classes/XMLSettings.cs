@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 using System.Xml.Serialization;
 
 namespace GeoVR.Shared
@@ -53,7 +52,7 @@ namespace GeoVR.Shared
                 case SettingsLocation.PublicDocuments:
                     return Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments), name + ".xml");
                 case SettingsLocation.Local:
-                    return Path.Combine(Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath), name + ".xml");
+                    return Path.Combine(Path.GetDirectoryName(new Uri(AppContext.BaseDirectory).LocalPath), name + ".xml");
                 default:
                     throw new Exception("SettingsLocation enum value not handled");
             }
