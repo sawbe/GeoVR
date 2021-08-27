@@ -76,7 +76,7 @@ namespace MessagePack.CryptoDto
             private readonly ReadOnlyMemory<byte> dtoBuffer;
             private readonly bool sequenceValid;
 
-            internal Deserializer(CryptoDtoChannel channel, ushort headerLength, CryptoDtoHeaderDto header, ReadOnlySpan<byte> bytes, bool ignoreSequence, IBufferWriter<byte> plaintextBuffer)
+            internal Deserializer(CryptoDtoChannel channel, ushort headerLength, CryptoDtoHeader header, ReadOnlySpan<byte> bytes, bool ignoreSequence, IBufferWriter<byte> plaintextBuffer)
             {
                 sequenceValid = false;
                 channelTag = header.ChannelTag;
@@ -126,14 +126,14 @@ namespace MessagePack.CryptoDto
                 }
             }
 
-            internal static CryptoDtoHeaderDto GetHeader(ReadOnlyMemory<byte> bytes, out ushort headerLength)
+            internal static CryptoDtoHeader GetHeader(ReadOnlyMemory<byte> bytes, out ushort headerLength)
             {
                 headerLength = Unsafe.ReadUnaligned<ushort>(ref MemoryMarshal.GetReference(bytes.Span));             //.NET Standard 2.0 doesn't have BitConverter.ToUInt16(Span<T>)               
                 if (bytes.Length < (2 + headerLength))
                     throw new CryptographicException("Not enough bytes to process packet.");
 
                 var headerDataBuffer = bytes.Slice(2, headerLength);
-                return MessagePackSerializer.Deserialize<CryptoDtoHeaderDto>(headerDataBuffer);     //This allocates heap memory for the string. The struct itself is on the stack. Wait for https://github.com/neuecc/MessagePack-CSharp/issues/107
+                return MessagePackSerializer.Deserialize<CryptoDtoHeader>(headerDataBuffer);     //This allocates heap memory for the string. The struct itself is on the stack. Wait for https://github.com/neuecc/MessagePack-CSharp/issues/107
             }
 
             public string GetChannelTag()
@@ -171,7 +171,7 @@ namespace MessagePack.CryptoDto
             public bool IsSequenceValid()           //Use this if the "Ignore Sequence" option was used for UDP channels
             {
                 return sequenceValid;
-            }
+            } 
         }
     }
 }

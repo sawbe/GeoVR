@@ -68,7 +68,7 @@ namespace MessagePack.CryptoDto
         public void Pack(IBufferWriter<byte> output, CryptoDtoChannel channel, CryptoDtoMode mode, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
         {
             channel.GetTransmitKey(mode, out ulong sequenceToSend);
-            CryptoDtoHeaderDto header = new CryptoDtoHeaderDto
+            CryptoDtoHeader header = new CryptoDtoHeader
             {
                 ChannelTag = channel.ChannelTag,
                 Mode = mode,
@@ -78,7 +78,7 @@ namespace MessagePack.CryptoDto
         }
 
         //Can we change the ChaCha20Poly1305 input to some kind of ICrypto interface or action with 'Encrypt' and 'Decrypt'?
-        private void Pack(IBufferWriter<byte> output, CryptoDtoHeaderDto header, ChaCha20Poly1305 crypto, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
+        private void Pack(IBufferWriter<byte> output, CryptoDtoHeader header, ChaCha20Poly1305 crypto, ReadOnlySpan<byte> dtoNameBuffer, ReadOnlySpan<byte> dtoBuffer)
         {
             lock (bufferLock)
             {
