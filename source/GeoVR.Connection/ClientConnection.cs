@@ -330,7 +330,15 @@ namespace GeoVR.Connection
                         continue;
                     //Could check that the sender has the right IP - but NAT-ing significantly reduces the attack surface here
                     connection.VoiceServerBytesReceived += data.Length;
-                    var deserializer = CryptoDtoDeserializer.DeserializeIgnoreSequence(connection.VoiceCryptoChannel, data);
+                    
+                    try {
+                        var deserializer = CryptoDtoDeserializer.DeserializeIgnoreSequence(connection.VoiceCryptoChannel, data);
+                    }
+                    catch (Exception ex) {
+                        logger.Error(ex);
+                        continue;
+                    }
+                    
                     if (!deserializer.IsSequenceValid())
                     {
                         logger.Debug("Duplicate or old packet received");
