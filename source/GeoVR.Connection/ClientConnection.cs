@@ -1,6 +1,5 @@
 ﻿using GeoVR.Shared;
 using MessagePack.CryptoDto;
-using MessagePack.CryptoDto.Managed;
 using NLog;
 using System;
 using System.Collections.Concurrent;
@@ -8,7 +7,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -330,15 +328,18 @@ namespace GeoVR.Connection
                         continue;
                     //Could check that the sender has the right IP - but NAT-ing significantly reduces the attack surface here
                     connection.VoiceServerBytesReceived += data.Length;
-                    
-                    try {
-                        var deserializer = CryptoDtoDeserializer.DeserializeIgnoreSequence(connection.VoiceCryptoChannel, data);
+
+                    CryptoDtoDeserializer.Deserializer deserializer;
+                    try
+                    {
+                        deserializer = CryptoDtoDeserializer.DeserializeIgnoreSequence(connection.VoiceCryptoChannel, data);
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex)
+                    {
                         logger.Error(ex);
                         continue;
                     }
-                    
+
                     if (!deserializer.IsSequenceValid())
                     {
                         logger.Debug("Duplicate or old packet received");

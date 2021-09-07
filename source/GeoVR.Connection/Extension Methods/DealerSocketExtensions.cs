@@ -1,9 +1,4 @@
-﻿using MessagePack.CryptoDto;
-using MessagePack.CryptoDto.Managed;
-using NetMQ;
-using NetMQ.Sockets;
-
-namespace GeoVR.Connection
+﻿namespace GeoVR.Connection
 {
     public static class DealerSocketExtensions
     {
