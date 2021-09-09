@@ -15,13 +15,12 @@ namespace GeoVR.Client
 
         public bool Started { get; private set; }
 
-        public void Start(string outputDevice, ISampleProvider sampleProvider)
+        public void Start(MMDevice outputDevice, ISampleProvider sampleProvider)
         {
             if (Started)
                 throw new Exception("Output already started");
 
-            MMDevice device = ClientAudioUtilities.MapWasapiOutputDevice(outputDevice);
-            waveOut = new WasapiOut(device, AudioClientShareMode.Shared, true, 20);
+            waveOut = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 20);
             waveOut.Init(sampleProvider);
             waveOut.Play();
 

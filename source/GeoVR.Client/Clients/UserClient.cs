@@ -17,6 +17,7 @@ using Concentus.Structs;
 using Concentus.Enums;
 using System.Diagnostics;
 using NLog;
+using NAudio.CoreAudioApi;
 
 namespace GeoVR.Client
 {
@@ -156,29 +157,18 @@ namespace GeoVR.Client
 
         public void Start(string outputAudioDevice, List<ushort> transceiverIDs)
         {
-            if (Started)
-            {
-                throw new Exception("Client already started");
-            }
-
-            soundcardSampleProvider = new SoundcardSampleProvider(sampleRate, transceiverIDs, eventHandler);
-            outputSampleProvider = new VolumeSampleProvider(soundcardSampleProvider);
-            outputSampleProvider.Volume = outputVolume;
-
-            output.Start(outputAudioDevice, outputSampleProvider);
-
-            playbackCancelTokenSource = new CancellationTokenSource();
-            taskAudioPlayback = new Task(() => TaskAudioPlayback(logger, playbackCancelTokenSource.Token, Connection.VoiceServerReceiveQueue), TaskCreationOptions.LongRunning);
-            taskAudioPlayback.Start();
-
-            StartDateTimeUtc = DateTime.UtcNow;
-
-            Connection.ReceiveAudio = true;
-            Started = true;
-            logger.Debug("Started [Input: None] [Output: " + outputAudioDevice + "]");
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDevice);
+            Start(null, output, transceiverIDs);
         }
 
         public void Start(string inputAudioDevice, string outputAudioDevice, List<ushort> transceiverIDs)
+        {
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDevice);
+            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDevice);
+            Start(input, output, transceiverIDs);
+        }
+
+        public void Start(MMDevice inputAudioDevice, MMDevice outputAudioDevice, List<ushort> transceiverIDs)
         {
             if (Started)
                 throw new Exception("Client already started");
@@ -193,13 +183,34 @@ namespace GeoVR.Client
             taskAudioPlayback = new Task(() => TaskAudioPlayback(logger, playbackCancelTokenSource.Token, Connection.VoiceServerReceiveQueue), TaskCreationOptions.LongRunning);
             taskAudioPlayback.Start();
 
-            input.Start(inputAudioDevice);
+            if(inputAudioDevice != null)
+                input.Start(inputAudioDevice.FriendlyName);
 
             StartDateTimeUtc = DateTime.UtcNow;
 
             Connection.ReceiveAudio = true;
             Started = true;
             logger.Debug("Started [Input: " + inputAudioDevice + "] [Output: " + outputAudioDevice + "]");
+        }
+
+        public void ChangeInputDevice(MMDevice device)
+        {
+            if (!Started)
+                throw new Exception("Client must be started first");
+
+            if (input.Started)
+                input.Stop();
+            input.Start(device.FriendlyName);
+        }
+
+        public void ChangeOutputDevice(MMDevice device)
+        {
+            if (!Started)
+                throw new Exception("Client must be started first");
+
+            if (output.Started)
+                output.Stop();
+            output.Start(device, outputSampleProvider);
         }
 
         public void Stop()
@@ -211,7 +222,8 @@ namespace GeoVR.Client
             Connection.ReceiveAudio = false;
             logger.Debug("Stopped");
 
-            input.Stop();
+            if(input.Started)
+                input.Stop();
 
             playbackCancelTokenSource.Cancel();
             taskAudioPlayback.Wait();
