@@ -56,6 +56,7 @@ namespace GeoVR.Client
                 if(samplesToCopy < count)
                 {
                     //Inject a small amount of silence at the end before looping
+                    Array.Clear(buffer, (int)samplesToCopy, (int)(count - samplesToCopy));//Ensure buffer is zeroed for silence so we don't get weird artifacts - sawbe
                     samplesToCopy = count;
                 }
                 if (position > resourceSound.AudioData.Length - 1)
