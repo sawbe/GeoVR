@@ -30,6 +30,7 @@ namespace GeoVR.Client
 
         private Input input;
         private Output output;
+        private SelcalInput selcalInput;
 
         private SoundcardSampleProvider soundcardSampleProvider;
         private VolumeSampleProvider outputSampleProvider;
@@ -92,14 +93,40 @@ namespace GeoVR.Client
 
         private EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
 
-        public UserClient(string apiServer, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler) : base(apiServer)
+        public UserClient(string apiServer, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler, bool enableSelcal = false) : base(apiServer)
         {
             this.eventHandler = eventHandler;
             input = new Input(sampleRate);
             input.OpusDataAvailable += Input_OpusDataAvailable;
             input.InputVolumeStream += Input_InputVolumeStream;
+            if(enableSelcal)
+            {
+                selcalInput = new SelcalInput(sampleRate);
+                selcalInput.OpusDataAvailable += SelcalInput_OpusDataAvailable;
+            }
             output = new Output();
             logger.Debug(nameof(UserClient) + " instantiated");
+        }
+
+        private void SelcalInput_OpusDataAvailable(object sender, SelcalInput.SelcalOpusDataAvailableEventArgs e)
+        {
+            if (transmittingTransceivers == null || transmittingTransceivers.Length == 0 || transmit)//PTT was pressed, stop sending.
+            {
+                selcalInput.Stop();
+                return;
+            }
+
+            if(Connection.IsConnected)
+            {
+                Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
+                {
+                    Callsign = Callsign,
+                    SequenceCounter = e.SequenceCounter,
+                    Audio = e.Audio,
+                    LastPacket = e.LastData,
+                    Transceivers = transmittingTransceivers
+                });
+            }
         }
 
         private void Input_InputVolumeStream(object sender, InputVolumeStreamEventArgs e)
@@ -266,6 +293,24 @@ namespace GeoVR.Client
             }
 
             logger.Debug("PTT: " + active.ToString());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="code">SELCAL tone without hyphen eg "ABCD"</param>
+        public void TransmitSELCAL(string code)
+        {
+            if (!Started)
+                throw new Exception("Client not started");
+
+            if (selcalInput == null)
+                throw new Exception("SELCAL was not enabled at constructor");
+
+            if (transmit)
+                return;//dont try and send while PTT is down
+
+            selcalInput.Play(code);
         }
 
         public void RequestCall(string callsign)

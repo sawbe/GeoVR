@@ -66,6 +66,7 @@
     <Compile Include="Audio\ResourceSound.cs" />
     <Compile Include="Audio\Audio Tree\ResourceSoundSampleProvider.cs" />
     <Compile Include="Audio\Audio Tree\ReceiverSampleProvider.cs" />
+    <Compile Include="Audio\SelcalInput.cs" />
     <Compile Include="CallRequestEventArgs.cs" />
     <Compile Include="Classes\AudioConfig.cs" />
     <Compile Include="Clients\BotClient.cs" />
