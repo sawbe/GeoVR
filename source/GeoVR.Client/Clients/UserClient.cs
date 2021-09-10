@@ -88,6 +88,12 @@ namespace GeoVR.Client
 
         //}
 
+        public event EventHandler SelcalStopped
+        {
+            add { selcalInput.Stopped += value; }
+            remove { selcalInput.Stopped -= value; }
+        }
+
         public event EventHandler<CallRequestEventArgs> CallRequest;
         public event EventHandler<CallResponseEventArgs> CallResponse;
 
@@ -296,9 +302,11 @@ namespace GeoVR.Client
         }
 
         /// <summary>
-        /// 
+        /// Transmits a SELCAL code. SELCAL must be enabled when constructing UserClient
         /// </summary>
-        /// <param name="code">SELCAL tone without hyphen eg "ABCD"</param>
+        /// <param name="code">Capitalized SELCAL code without hyphen eg "ABCD"</param>
+        /// <exception cref="System.Exception">Client not started or misconfigured</exception>
+        /// <exception cref="System.ArgumentException">Invalid code string</exception>
         public void TransmitSELCAL(string code)
         {
             if (!Started)

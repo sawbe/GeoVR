@@ -53,6 +53,7 @@ namespace GeoVR.Client
         private Timer playbackTimer;
 
         public event EventHandler<SelcalOpusDataAvailableEventArgs> OpusDataAvailable;
+        public event EventHandler Stopped;
 
         public bool Playing { get; private set; }
         public long OpusBytesEncoded { get; set; }
@@ -79,19 +80,19 @@ namespace GeoVR.Client
         }
 
         /// <summary>
-        /// 
+        /// Starts playback of SELCAL tones
         /// </summary>
-        /// <param name="tone">SELCAL tone without hyphen eg "ABCD"</param>
-        public void Play(string tone)
+        /// <param name="code">Capitalized SELCAL code without hyphen eg "ABCD"</param>
+        public void Play(string code)
         {
             if (Playing)
                 Stop();
 
-            if (tone.Length != 4 || tone.Any(c=>!codeLookup.ContainsKey(c)))
+            if (code.Length != 4 || code.Any(c=>!codeLookup.ContainsKey(c)))
                 throw new ArgumentException("Invalid SELCAL tone");
 
-            tonesPlaying = tone;
-            AddSignalsToMixer(tone.Substring(0, 2));
+            tonesPlaying = code;
+            AddSignalsToMixer(code.Substring(0, 2));
             Playing = true;
             playbackTimer.Start();
         }
@@ -102,6 +103,7 @@ namespace GeoVR.Client
             playbackTimer.Stop();
             tonesPlaying = string.Empty;
             toneSent = 0;
+            Stopped?.Invoke(this, new EventArgs());
         }
 
         private void PlaybackTimer_Elapsed(object sender, ElapsedEventArgs e)
