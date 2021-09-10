@@ -36,7 +36,6 @@ namespace GeoVR.Client
         private static TimeSpan codeDuration = TimeSpan.FromSeconds(1);
 
         private readonly int frameSize = 960;
-        private WaveFormat waveFormat;
 
         private OpusEncoder encoder;
 
@@ -60,8 +59,6 @@ namespace GeoVR.Client
 
         public SelcalInput(int sampleRate)
         {
-            waveFormat = new WaveFormat(sampleRate, 1);
-
             encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = 16 * 1024;
 
@@ -118,13 +115,11 @@ namespace GeoVR.Client
                 if(++toneSent >= 2)
                 {
                     Stop();
-                    return;
                 }
                 else//this can only mean we have the second tone to play
                 {
                     AddSignalsToMixer(tonesPlaying.Substring(2, 2));
                     playbackTimer.Start();
-                    return;
                 }
             }
             else //data available
