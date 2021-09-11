@@ -63,6 +63,7 @@
     <Compile Include="Audio\Input.cs" />
     <Compile Include="Audio\LimiterEffect.cs" />
     <Compile Include="Audio\Output.cs" />
+    <Compile Include="Audio\ResamplingWasapiCapture.cs" />
     <Compile Include="Audio\ResourceSound.cs" />
     <Compile Include="Audio\Audio Tree\ResourceSoundSampleProvider.cs" />
     <Compile Include="Audio\Audio Tree\ReceiverSampleProvider.cs" />
