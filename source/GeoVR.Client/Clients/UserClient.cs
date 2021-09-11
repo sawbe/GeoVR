@@ -201,7 +201,7 @@ namespace GeoVR.Client
             Start(input, output, transceiverIDs);
         }
 
-        public void Start(MMDevice inputAudioDevice, MMDevice outputAudioDevice, List<ushort> transceiverIDs)
+        protected void Start(MMDevice inputAudioDevice, MMDevice outputAudioDevice, List<ushort> transceiverIDs)
         {
             if (Started)
                 throw new Exception("Client already started");
@@ -226,7 +226,19 @@ namespace GeoVR.Client
             logger.Debug("Started [Input: " + inputAudioDevice + "] [Output: " + outputAudioDevice + "]");
         }
 
-        public void ChangeInputDevice(MMDevice device)
+        public void ChangeInputDevice(string inputDeviceName)
+        {
+            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputDeviceName);
+            ChangeInputDevice(input);
+        }
+
+        public void ChangeOutputDevice(string outputDeviceName)
+        {
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputDeviceName);
+            ChangeOutputDevice(output);
+        }
+
+        private void ChangeInputDevice(MMDevice device)
         {
             if (!Started)
                 throw new Exception("Client must be started first");
@@ -236,7 +248,7 @@ namespace GeoVR.Client
             input.Start(device.FriendlyName);
         }
 
-        public void ChangeOutputDevice(MMDevice device)
+        private void ChangeOutputDevice(MMDevice device)
         {
             if (!Started)
                 throw new Exception("Client must be started first");

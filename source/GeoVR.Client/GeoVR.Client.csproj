@@ -74,6 +74,7 @@
     <Compile Include="Classes\DataServerAcks.cs" />
     <Compile Include="Clients\BaseClient.cs" />
     <Compile Include="Clients\IClient.cs" />
+    <Compile Include="Clients\NAudioUserClient.cs" />
     <Compile Include="Clients\UserClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CallResponseEventArgs.cs" />
