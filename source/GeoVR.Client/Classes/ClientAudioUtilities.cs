@@ -69,9 +69,12 @@ namespace GeoVR.Client
 
         public static int MapInputDevice(string inputDevice)
         {
+            if (string.IsNullOrEmpty(inputDevice))
+                return 0;
+
             for (int i = 0; i < WaveIn.DeviceCount; i++)
             {
-                if (WaveIn.GetCapabilities(i).ProductName == inputDevice)
+                if (inputDevice.Contains(WaveIn.GetCapabilities(i).ProductName))
                     return i;
             }
             return 0;       //Else use default
