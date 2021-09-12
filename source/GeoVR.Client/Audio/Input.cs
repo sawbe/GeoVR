@@ -13,11 +13,10 @@ namespace GeoVR.Client
     public class Input
     {
         private readonly int frameSize = 960;
-        private int sampleRate;
+        private readonly int sampleRate;
 
-        private string deviceName;
-
-        private OpusEncoder encoder;
+        private MMDevice inputDevice;
+        private readonly OpusEncoder encoder;
         private ResamplingWasapiCapture wasapiCapture;
         private InputVolumeStreamEventArgs inputVolumeStreamArgs;
         private OpusDataAvailableEventArgs opusDataAvailableArgs;
@@ -25,30 +24,57 @@ namespace GeoVR.Client
         public event EventHandler<OpusDataAvailableEventArgs> OpusDataAvailable;
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
 
-        public string DeviceName => deviceName;
+        public string DeviceName => inputDevice?.FriendlyName;
         public bool Started { get; private set; }
         public long OpusBytesEncoded { get; set; }
         public float Volume { get; set; } = 1;
 
-        public Input(int sampleRate)
+        /// <summary>
+        /// Creates an Input. Start must be called to begin capture
+        /// </summary>
+        /// <param name="audioDevice">WASAPI Capture device</param>
+        /// <param name="sampleRate">Audio sample rate</param>
+        public Input(MMDevice audioDevice, int sampleRate)
         {
+            if (audioDevice is null)
+                throw new ArgumentNullException(nameof(audioDevice));
+
+            inputDevice = audioDevice;
             this.sampleRate = sampleRate;
             encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = 16 * 1024;
         }
 
-        public void Start(MMDevice inputDevice)
+        /// <summary>
+        /// Starts input capture with specified device
+        /// </summary>
+        /// <param name="audioDevice">Capture device</param>
+        /// <exception cref="Exception">Input already started</exception>
+        public void Start(MMDevice audioDevice)
         {
             if (Started)
                 throw new Exception("Input already started");
 
-            deviceName = inputDevice.FriendlyName;
+            inputDevice = audioDevice;
+            Start();
+        }
 
-            wasapiCapture = new ResamplingWasapiCapture(inputDevice, true, 20);
-            wasapiCapture.WaveFormat = new WaveFormat(sampleRate, 16, 1);
+        /// <summary>
+        /// Starts input capture
+        /// </summary>
+        /// <exception cref="Exception">Input already started</exception>
+        public void Start()
+        {
+            if (Started)
+                throw new Exception("Input already started");
+
+            wasapiCapture = new ResamplingWasapiCapture(inputDevice, true, 20)
+            {
+                WaveFormat = new WaveFormat(sampleRate, 16, 1)
+            };
             wasapiCapture.DataAvailable += WasapiCapture_DataAvailable;
 
-            inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceName = deviceName, PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
+            inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceName = inputDevice.FriendlyName, PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
             opusDataAvailableArgs = new OpusDataAvailableEventArgs();
 
             wasapiCapture.StartRecording();
@@ -56,6 +82,9 @@ namespace GeoVR.Client
             Started = true;
         }
 
+        /// <summary>
+        /// Stop input capture
+        /// </summary>
         public void Stop()
         {
             if (!Started)
@@ -68,16 +97,15 @@ namespace GeoVR.Client
             wasapiCapture = null;
         }
 
-        byte[] encodedDataBuffer = new byte[1275];
-        int encodedDataLength;
-        uint audioSequenceCounter = 0;
-        //InputVolumeStream event
-        float maxSampleInput = 0;
-        float sampleInput = 0;
+        private readonly byte[] encodedDataBuffer = new byte[1275];
+        private int encodedDataLength;
+        private uint audioSequenceCounter = 0;
+        private float maxSampleInput = 0;
+        private float sampleInput = 0;
         private int sampleCount = 0;
-        private int sampleCountPerEvent = 4800;
-        float maxDb = 0;
-        float minDb = -40;
+        private readonly int sampleCountPerEvent = 4800;
+        private readonly float maxDb = 0;
+        private readonly float minDb = -40;
         private void WasapiCapture_DataAvailable(object sender, WaveInEventArgs e)
         {
             var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(e.Buffer);

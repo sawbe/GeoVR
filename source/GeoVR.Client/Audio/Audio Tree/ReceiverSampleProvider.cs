@@ -91,7 +91,7 @@ namespace GeoVR.Client
 
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
-        private bool hfSquelchEn = false;
+        private readonly bool hfSquelchEn = false;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
         {
