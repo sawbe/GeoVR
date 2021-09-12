@@ -1,5 +1,6 @@
 ﻿using Concentus.Enums;
 using Concentus.Structs;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -14,14 +15,17 @@ namespace GeoVR.Client
         private readonly int frameSize = 960;
         private int sampleRate;
 
+        private string deviceName;
+
         private OpusEncoder encoder;
-        private WaveInEvent waveIn;
+        private ResamplingWasapiCapture wasapiCapture;
         private InputVolumeStreamEventArgs inputVolumeStreamArgs;
         private OpusDataAvailableEventArgs opusDataAvailableArgs;
 
         public event EventHandler<OpusDataAvailableEventArgs> OpusDataAvailable;
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
 
+        public string DeviceName => deviceName;
         public bool Started { get; private set; }
         public long OpusBytesEncoded { get; set; }
         public float Volume { get; set; } = 1;
@@ -33,24 +37,21 @@ namespace GeoVR.Client
             encoder.Bitrate = 16 * 1024;
         }
 
-        public void Start(string inputDevice)
+        public void Start(MMDevice inputDevice)
         {
             if (Started)
                 throw new Exception("Input already started");
 
-            //waveIn = new WaveIn(WaveCallbackInfo.FunctionCallback());
-            waveIn = new WaveInEvent();
-            waveIn.BufferMilliseconds = 20;
-            //Console.WriteLine("Input device: " + WaveIn.GetCapabilities(0).ProductName);
-            waveIn.DeviceNumber = ClientAudioUtilities.MapInputDevice(inputDevice);
-            waveIn.DataAvailable += _waveIn_DataAvailable;
-            waveIn.WaveFormat = new WaveFormat(sampleRate, 16, 1);
+            deviceName = inputDevice.FriendlyName;
 
-            inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceNumber = waveIn.DeviceNumber, PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
+            wasapiCapture = new ResamplingWasapiCapture(inputDevice, true, 20);
+            wasapiCapture.WaveFormat = new WaveFormat(sampleRate, 16, 1);
+            wasapiCapture.DataAvailable += WasapiCapture_DataAvailable;
+
+            inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceName = deviceName, PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
             opusDataAvailableArgs = new OpusDataAvailableEventArgs();
 
-            //inputControls = ClientAudioUtilities.GetWaveInMixerControls(waveIn.DeviceNumber);
-            waveIn.StartRecording();
+            wasapiCapture.StartRecording();
 
             Started = true;
         }
@@ -62,9 +63,9 @@ namespace GeoVR.Client
 
             Started = false;
 
-            waveIn.StopRecording();
-            waveIn.Dispose();
-            waveIn = null;
+            wasapiCapture.StopRecording();
+            wasapiCapture.Dispose();
+            wasapiCapture = null;
         }
 
         byte[] encodedDataBuffer = new byte[1275];
@@ -77,7 +78,7 @@ namespace GeoVR.Client
         private int sampleCountPerEvent = 4800;
         float maxDb = 0;
         float minDb = -40;
-        private void _waveIn_DataAvailable(object sender, WaveInEventArgs e)
+        private void WasapiCapture_DataAvailable(object sender, WaveInEventArgs e)
         {
             var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(e.Buffer);
             if (samples.Length != frameSize)
@@ -148,7 +149,7 @@ namespace GeoVR.Client
 
     public class InputVolumeStreamEventArgs
     {
-        public int DeviceNumber { get; set; }
+        public string DeviceName { get; set; }
         public float PeakRaw { get; set; }
         public float PeakDB { get; set; }
         public float PeakVU { get; set; }
