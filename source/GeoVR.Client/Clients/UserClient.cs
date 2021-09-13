@@ -42,6 +42,12 @@ namespace GeoVR.Client
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="apiServer"></param>
+        /// <param name="eventHandler">EventHandler for receiving callsign changed events</param>
+        /// <param name="enableSelcal">True if client wishes to transmit selcal</param>
         public UserClient(string apiServer, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler, bool enableSelcal = false) : base(apiServer)
         {
             this.eventHandler = eventHandler;
@@ -109,6 +115,10 @@ namespace GeoVR.Client
             logger.Debug($"Added Soundcard [Input:{inputDevice?.FriendlyName} Output:{outputDevice?.FriendlyName}]");
         }
 
+        /// <summary>
+        /// Removes all soundcards
+        /// </summary>
+        /// <exception cref="Exception">Client started</exception>
         public void RemoveSoundcards()
         {
             if (Started)
@@ -125,6 +135,11 @@ namespace GeoVR.Client
         /// <exception cref="Exception">Client already started</exception>
         public void Start(string outputAudioDeviceName, List<ushort> transceiverIDs)
         {
+            if (Started)
+                throw new Exception("Client already started");
+
+            soundcards.Clear();
+
             MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
             AddSoundcard(null, output, transceiverIDs);
             Start();
@@ -139,6 +154,11 @@ namespace GeoVR.Client
         /// <exception cref="Exception">Client already started</exception>
         public void Start(string inputAudioDeviceName, string outputAudioDeviceName, List<ushort> transceiverIDs)
         {
+            if (Started)
+                throw new Exception("Client already started");
+
+            soundcards.Clear();
+
             MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
             MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
             AddSoundcard(input, output, transceiverIDs);
@@ -195,6 +215,11 @@ namespace GeoVR.Client
             while (Connection.VoiceServerReceiveQueue.TryTake(out _)) { }        //Clear the VoiceServerReceiveQueue.
         }
 
+        /// <summary>
+        /// Change the input device used by a soundcard
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="inputAudioDeviceName">WASAPI Capture FriendlyName</param>
         public void ChangeSoundcardInputDevice(Soundcard soundcard, string inputAudioDeviceName)
         {
             MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
@@ -204,7 +229,11 @@ namespace GeoVR.Client
         {
             soundcard.ChangeInputDevice(device);
         }
-
+        /// <summary>
+        /// Change the output device used by a soundcard
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="outputAudioDeviceName">WASAPI Render FriendlyName</param>
         public void ChangeSoundcardOutputDevice(Soundcard soundcard, string outputAudioDeviceName)
         {
             MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
@@ -216,13 +245,29 @@ namespace GeoVR.Client
         }
 
         /// <summary>
-        /// Sets Push to Talk state for all soundcards. To set individual push to talks, call Soundcard.PTT instead
+        /// Sets Push to Talk state for first soundcard
         /// </summary>
         /// <param name="active">PTT down</param>
         public void PTT(bool active)
         {
-            foreach(var soundcard in soundcards)
+            PTT(soundcards[0], active);
+        }
+
+        /// <summary>
+        /// Sets Push to Talk state for nominated Soundcard. 
+        /// If another soundcard is currently transmitting on a shared transceiver, PTT will be blocked
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="active">PTT down</param>
+        public void PTT(Soundcard soundcard, bool active)
+        {
+            var reqIds = soundcard.TransmittingTransceivers.Select(t => t.ID);
+            if (!active || !soundcards.Any(s => s != soundcard && s.TransmittingTransceivers.Select(t => t.ID).Intersect(reqIds).Any()))
+            {
                 soundcard.PTT(active);
+            }
+            else
+                logger.Debug("PTT blocked for soundcard " + soundcard.ID);
         }
 
         /// <summary>
@@ -243,6 +288,10 @@ namespace GeoVR.Client
             selcalInput.Play(code);
         }
 
+        /// <summary>
+        /// Updates transceivers that this client is receiving from the server
+        /// </summary>
+        /// <param name="transceivers"></param>
         public override void UpdateTransceivers(List<TransceiverDto> transceivers)
         {
             base.UpdateTransceivers(transceivers);

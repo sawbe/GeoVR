@@ -12,7 +12,7 @@ namespace GeoVR.Client
 {
     public class Input
     {
-        private readonly int frameSize = 960;
+        private const int frameSize = 960;
         private readonly int sampleRate;
 
         private MMDevice inputDevice;
@@ -97,18 +97,40 @@ namespace GeoVR.Client
             wasapiCapture = null;
         }
 
+        private readonly byte[] recordedBuffer = new byte[frameSize * 2];
         private readonly byte[] encodedDataBuffer = new byte[1275];
         private int encodedDataLength;
         private uint audioSequenceCounter = 0;
         private float maxSampleInput = 0;
         private float sampleInput = 0;
         private int sampleCount = 0;
+        private int bufferOffset = 0;
         private readonly int sampleCountPerEvent = 4800;
         private readonly float maxDb = 0;
         private readonly float minDb = -40;
         private void WasapiCapture_DataAvailable(object sender, WaveInEventArgs e)
         {
-            var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(e.Buffer);
+            if (e.BytesRecorded == 0 || e.BytesRecorded < frameSize)
+                return;
+
+            int offset = 0;
+            int halfFrameCount = e.BytesRecorded / frameSize;
+            for (int i = 0; i < halfFrameCount; i++)
+            {
+                Buffer.BlockCopy(e.Buffer, offset, recordedBuffer, bufferOffset, frameSize);
+                bufferOffset += frameSize;
+                if (bufferOffset >= frameSize * 2)
+                {
+                    ProcessBuffer();
+                    bufferOffset = 0;
+                }
+                offset += frameSize;
+            }
+        }
+
+        private void ProcessBuffer()
+        {
+            var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(recordedBuffer);
             if (samples.Length != frameSize)
                 throw new Exception("Incorrect number of samples.");
 

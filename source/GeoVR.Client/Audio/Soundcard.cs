@@ -11,6 +11,7 @@ namespace GeoVR.Client
 {
     public class Soundcard
     {
+        private static ushort soundcardCounter = 0;
         private readonly Input input;
         private readonly Output output;
         private readonly SoundcardSampleProvider soundcardSampleProvider;
@@ -21,6 +22,7 @@ namespace GeoVR.Client
         private bool transmitActive;
         private bool transmitActiveHistory;
 
+        public ushort ID { get; }
         public bool Started { get; internal set; }
         public bool BypassEffects { set { soundcardSampleProvider.BypassEffects = value; } }
         public string InputDeviceName => input?.DeviceName;
@@ -66,6 +68,7 @@ namespace GeoVR.Client
 
         public Soundcard(MMDevice inputDevice, MMDevice outputDevice, int sampleRate, List<ushort> transceiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> receivingCallsignsChangedHandler)
         {
+            ID = soundcardCounter++;
             output = new Output(outputDevice);
             if (inputDevice != null)
             {
@@ -127,7 +130,8 @@ namespace GeoVR.Client
 
         internal void ProcessRadioRx(RadioRxDto dto)
         {
-            soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
+            if(output.Started)
+                soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
         }
 
         internal void UpdateTransceivers(List<TransceiverDto> trans)
@@ -135,8 +139,7 @@ namespace GeoVR.Client
             soundcardSampleProvider.UpdateTransceivers(trans);
         }
 
-
-        public void PTT(bool active)
+        internal void PTT(bool active)
         {
             if (transmitActive == active)
                 return;
@@ -147,15 +150,49 @@ namespace GeoVR.Client
             if (!active)
                 maxDbReadingInPTTInterval = -100;
         }
-
-        public void UpdateTransmittingTransceivers(List<TxTransceiverDto> txtrans)
+        /// <summary>
+        /// Updates transceivers that will receive audio when PTT is active.
+        /// Only transceiver IDs matching this soundcard will be added
+        /// </summary>
+        /// <param name="txTranceiverIDs">IDs of Transceivers to transmit on</param>
+        public void UpdateTransmittingTransceivers(List<ushort> txTranceiverIDs)
         {
-            transmitTrans = txtrans;
+            var con = transceiverIds.Intersect(txTranceiverIDs);
+            List<TxTransceiverDto> dtos = new List<TxTransceiverDto>();
+            foreach (ushort id in con)
+                dtos.Add(new TxTransceiverDto() { ID = id });
+            transmitTrans = dtos;
         }
-
+        /// <summary>
+        /// Sets the one transceiver that will receive audio when PTT is active 
+        /// or none if no IDs match transceivers used by this soundcard
+        /// </summary>
+        /// <param name="singleTxTransID"></param>
         public void UpdateTransmittingTransceivers(ushort singleTxTransID)
         {
-            transmitTrans = new List<TxTransceiverDto>() { new TxTransceiverDto() { ID = singleTxTransID } };
+            if (transceiverIds.Contains(singleTxTransID))
+                transmitTrans = new List<TxTransceiverDto>() { new TxTransceiverDto() { ID = singleTxTransID } };
+            else if(transmitTrans.Count > 0)
+                transmitTrans = new List<TxTransceiverDto>();
+        }
+
+        /// <summary>
+        /// Adds or removes transceivers to existing soundcard
+        /// Useful for ATC clients when not enough starting IDs to cover additional frequencies
+        /// Each ID corresponds to a sample provider, using minimum value suggested.
+        /// </summary>
+        /// <param name="ids"></param>
+        public void UpdateTransceiverIDs(List<ushort> ids)
+        {
+            if (output.Started)
+                output.Stop();
+
+            transceiverIds.Clear();
+            transceiverIds.AddRange(ids);
+            soundcardSampleProvider.UpdateReceiverInputs(ids);
+
+            if (Started)
+                output.Start(volumeSampleProvider);
         }
 
         public void SetOutputVolume(float volume)
