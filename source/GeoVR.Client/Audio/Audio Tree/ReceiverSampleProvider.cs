@@ -155,15 +155,12 @@ namespace GeoVR.Client
             if (frequency != this.frequency)        //Lag in the backend means we get the tail end of a transmission if switching frequency in the middle of a transmission
                 return;
 
-            CallsignSampleProvider voiceInput = null;
-
-            if (voiceInputs.Any(i => i.Callsign == audioDto.Callsign))
+            CallsignSampleProvider voiceInput = voiceInputs.FirstOrDefault(b => b.Callsign == audioDto.Callsign);
+            if (voiceInput == null)
             {
-                voiceInput = voiceInputs.First(b => b.Callsign == audioDto.Callsign);
-            }
-            else if (voiceInputs.Any(b => b.InUse == false))
-            {
-                voiceInput = voiceInputs.First(b => b.InUse == false);
+                CallsignSampleProvider notInUseInput = voiceInputs.FirstOrDefault(b => !b.InUse);
+                if (notInUseInput != null)
+                    voiceInput = notInUseInput;
                 voiceInput.Active(audioDto.Callsign, "");
             }
 
@@ -176,17 +173,16 @@ namespace GeoVR.Client
         {
             if (frequency != this.frequency)
                 return;
-
-            CallsignSampleProvider voiceInput = null;
-
-            if (voiceInputs.Any(i => i.Callsign == audioDto.Callsign))
+            //CallsignSampleProvider might change Callsign on us between calling .Any and .First. Use FirstAndDefault once instead
+            CallsignSampleProvider voiceInput = voiceInputs.FirstOrDefault(b => b.Callsign == audioDto.Callsign);
+            if (voiceInput == null)
             {
-                voiceInput = voiceInputs.First(b => b.Callsign == audioDto.Callsign);
-            }
-            else if (voiceInputs.Any(b => b.InUse == false))
-            {
-                voiceInput = voiceInputs.First(b => b.InUse == false);
-                voiceInput.ActiveSilent(audioDto.Callsign, "");
+                CallsignSampleProvider notInUseInput = voiceInputs.FirstOrDefault(b => !b.InUse);
+                if (notInUseInput != null)
+                {
+                    voiceInput = notInUseInput;
+                    voiceInput.ActiveSilent(audioDto.Callsign, "");
+                }
             }
 
             voiceInput?.AddSilentSamples(audioDto);
