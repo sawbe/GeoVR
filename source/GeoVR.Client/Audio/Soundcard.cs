@@ -6,9 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GeoVR.Shared;
+using NAudio.Wave;
 
 namespace GeoVR.Client
 {
+    /// <summary>
+    /// This class processes audio packets for its transceivers through an effect chain and outputs to a Wasapi rendering device. 
+    /// When PTT is active, this class processes Wasapi capture and sends audio packets to nominated transmitting transceivers. 
+    /// </summary>
     public class Soundcard
     {
         private static ushort soundcardCounter = 0;
@@ -22,14 +27,38 @@ namespace GeoVR.Client
         private bool transmitActive;
         private bool transmitActiveHistory;
 
+        /// <summary>
+        /// Unique ID
+        /// </summary>
         public ushort ID { get; }
+        /// <summary>
+        /// Audio processing has started
+        /// </summary>
         public bool Started { get; internal set; }
+        /// <summary>
+        /// Bypass radio effects
+        /// </summary>
         public bool BypassEffects { set { soundcardSampleProvider.BypassEffects = value; } }
+        /// <summary>
+        /// Wasapi Device FriendlyName
+        /// </summary>
         public string InputDeviceName => input?.DeviceName;
+        /// <summary>
+        /// Wasapi Device FriendlyName
+        /// </summary>
         public string OutputDeviceName => output.DeviceName;
+        /// <summary>
+        /// IDs of transceivers this Soundcard is receiving
+        /// </summary>
         public ushort[] TransceiverIds => transceiverIds.ToArray();
+        /// <summary>
+        /// IDs of transceivers this Soundcard is transmitting on
+        /// </summary>
         public TxTransceiverDto[] TransmittingTransceivers => transmitTrans.ToArray();
         private float inputVolumeDb;
+        /// <summary>
+        /// Input device volume adjustment (in Db)
+        /// </summary>
         public float InputVolumeDb
         {
             set
@@ -46,6 +75,9 @@ namespace GeoVR.Client
         }
 
         private float outputVolume = 1;
+        /// <summary>
+        /// Output device volume adjustment (in Db)
+        /// </summary>
         public float OutputVolumeDb
         {
             set
@@ -57,7 +89,9 @@ namespace GeoVR.Client
                     volumeSampleProvider.Volume = outputVolume;
             }
         }
-
+        /// <summary>
+        /// Input volume monitoring
+        /// </summary>
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream
         {
             add { input.InputVolumeStream += value; }
@@ -66,10 +100,11 @@ namespace GeoVR.Client
 
         internal event EventHandler<SoundcardRadioTxAvailableEventArgs> RadioTxAvailable;
 
-        public Soundcard(MMDevice inputDevice, MMDevice outputDevice, int sampleRate, List<ushort> transceiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> receivingCallsignsChangedHandler)
+        internal Soundcard(MMDevice inputDevice, MMDevice outputDevice, int sampleRate, List<ushort> transceiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> receivingCallsignsChangedHandler)
         {
             ID = soundcardCounter++;
-            output = new Output(outputDevice);
+            if(outputDevice != null)
+                output = new Output(outputDevice);
             if (inputDevice != null)
             {
                 input = new Input(inputDevice, sampleRate);
@@ -91,7 +126,7 @@ namespace GeoVR.Client
 
             Started = true;
 
-            output.Start(volumeSampleProvider);
+            output?.Start(volumeSampleProvider);
             input?.Start();
         }
 
@@ -150,6 +185,12 @@ namespace GeoVR.Client
             if (!active)
                 maxDbReadingInPTTInterval = -100;
         }
+        internal ISampleProvider GetOutputSampleProvider()
+        {
+            if (output != null)
+                throw new Exception("This soundcard has an output device");
+            return volumeSampleProvider;
+        }
         /// <summary>
         /// Updates transceivers that will receive audio when PTT is active.
         /// Only transceiver IDs matching this soundcard will be added
@@ -194,12 +235,18 @@ namespace GeoVR.Client
             if (Started)
                 output.Start(volumeSampleProvider);
         }
-
+        /// <summary>
+        /// Set output volume
+        /// </summary>
+        /// <param name="volume"></param>
         public void SetOutputVolume(float volume)
         {
             volumeSampleProvider.Volume = volume;
         }
-
+        /// <summary>
+        /// Set recording volume
+        /// </summary>
+        /// <param name="volume"></param>
         public void SetInputVolume(float volume)
         {
             input.Volume = volume;
@@ -246,12 +293,14 @@ namespace GeoVR.Client
             transmitActiveHistory = transmitActive;
         }
     }
+    /// <summary>
+    /// Carries RadioTxDto (minus Callsign) for sending to server
+    /// </summary>
+    internal class SoundcardRadioTxAvailableEventArgs : EventArgs
+    {
+        internal RadioTxDto RadioTx { get; }
 
-    public class SoundcardRadioTxAvailableEventArgs : EventArgs
-    { 
-        public RadioTxDto RadioTx { get; }
-
-        public SoundcardRadioTxAvailableEventArgs(RadioTxDto dto)
+        internal SoundcardRadioTxAvailableEventArgs(RadioTxDto dto)
         {
             RadioTx = dto;
         }

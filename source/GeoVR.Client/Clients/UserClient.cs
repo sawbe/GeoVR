@@ -3,19 +3,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using GeoVR.Shared;
-using NAudio.Wave.SampleProviders;
-using NAudio.Utils;
-using System.Net;
-using System.Net.Sockets;
-using RestSharp;
-using Concentus.Structs;
-using Concentus.Enums;
-using System.Diagnostics;
 using NLog;
 using NAudio.CoreAudioApi;
 
@@ -33,11 +23,25 @@ namespace GeoVR.Client
 
         private readonly List<Soundcard> soundcards;
 
+        /// <summary>
+        /// Sets the bypassing of radio effects on each current soundcard
+        /// </summary>
         public bool BypassEffects { set { foreach(var soundcard in soundcards)soundcard.BypassEffects = value; } }
+        /// <summary>
+        /// Audio processing started
+        /// </summary>
         public bool Started { get; private set; }
+        /// <summary>
+        /// Time audio processing started
+        /// </summary>
         public DateTime StartDateTimeUtc { get; private set; }
+        /// <summary>
+        /// Array of Soundcards used for Audio IO
+        /// </summary>
         public Soundcard[] Soundcards => soundcards.ToArray();
-
+        /// <summary>
+        /// SELCAL finished transmitting
+        /// </summary>
         public event EventHandler SelcalStopped { add { selcalInput.Stopped += value; } remove { selcalInput.Stopped -= value; } }
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
@@ -95,6 +99,7 @@ namespace GeoVR.Client
         /// <param name="inputAudioDeviceName">WASAPI Capture Device FriendlyName</param>
         /// <param name="outputAudioDeviceName">WASAPI Render Device FriendlyName</param>
         /// <param name="transceiverIDs">IDs of the transceivers to process</param>
+        /// <exception cref="Exception">Client started</exception>
         public void AddSoundcard(string inputAudioDeviceName, string outputAudioDeviceName, List<ushort> transceiverIDs)
         {
             if (Started)
@@ -130,7 +135,7 @@ namespace GeoVR.Client
         /// <summary>
         /// Starts the audio client with one Soundcard
         /// </summary>
-        /// <param name="outputAudioDevice">WASAPI Render Device FriendlyName</param>
+        /// <param name="outputAudioDeviceName">WASAPI Render Device FriendlyName</param>
         /// <param name="transceiverIDs">IDs of the transceivers to process</param>
         /// <exception cref="Exception">Client already started</exception>
         public void Start(string outputAudioDeviceName, List<ushort> transceiverIDs)
@@ -274,6 +279,7 @@ namespace GeoVR.Client
         /// Transmits a SELCAL code. SELCAL must be enabled when constructing UserClient
         /// </summary>
         /// <param name="code">Capitalized SELCAL code without hyphen eg "ABCD"</param>
+        /// <param name="transmitTransceivers">Transceivers to transmit SELCAL on</param>
         /// <exception cref="System.Exception">Client not started or misconfigured</exception>
         /// <exception cref="System.ArgumentException">Invalid code string</exception>
         public void TransmitSELCAL(string code, IList<TxTransceiverDto> transmitTransceivers)
