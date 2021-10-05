@@ -23,9 +23,13 @@ namespace GeoVR.Client
             return WaveIn.DeviceCount > 0;
         }
 
+        /// <summary>
+        /// Get available input device names 
+        /// </summary>
+        /// <returns>Active Wasapi Capture device FriendlyNames</returns>
         public static IEnumerable<string> GetInputDevices()
         {
-            return GetWaveInInputDevices();
+            return GetWasapiInputDevices();
         }
 
         private static IEnumerable<string> GetWaveInInputDevices()
@@ -71,7 +75,8 @@ namespace GeoVR.Client
         {
             for (int i = 0; i < WaveIn.DeviceCount; i++)
             {
-                if (WaveIn.GetCapabilities(i).ProductName == inputDevice)
+                //WaveIn name may be truncated - assume inputDevice is full Wasapi name
+                if (inputDevice.StartsWith(WaveIn.GetCapabilities(i).ProductName))
                     return i;
             }
             return 0;       //Else use default
@@ -88,7 +93,7 @@ namespace GeoVR.Client
         {
             for (int i = 0; i < WaveOut.DeviceCount; i++)
             {
-                if (WaveOut.GetCapabilities(i).ProductName == outputDevice)
+                if (outputDevice.StartsWith(WaveOut.GetCapabilities(i).ProductName))
                     return i;
             }
             return 0;       //Else use default
