@@ -20,6 +20,7 @@ namespace GeoVR.Client
 
         private readonly SelcalInput selcalInput;
         private TxTransceiverDto[] selcalTransmitters;
+        private ushort[] selcalMutedSoundcardIds;
 
         private readonly List<Soundcard> soundcards;
 
@@ -60,8 +61,20 @@ namespace GeoVR.Client
             {
                 selcalInput = new SelcalInput(sampleRate);
                 selcalInput.OpusDataAvailable += SelcalInput_OpusDataAvailable;
+                selcalInput.Stopped += SelcalInput_Stopped;
             }
             logger.Debug(nameof(UserClient) + " instantiated");
+        }
+
+        private void SelcalInput_Stopped(object sender, EventArgs e)
+        {
+            if (selcalMutedSoundcardIds == null)
+                return;
+            foreach(var id in selcalMutedSoundcardIds)
+            {
+                var sc = soundcards.FirstOrDefault(s => s.ID == id);
+                sc?.Mute(false);
+            }
         }
 
         private void SelcalInput_OpusDataAvailable(object sender, SelcalInput.SelcalOpusDataAvailableEventArgs e)
@@ -292,6 +305,14 @@ namespace GeoVR.Client
 
             selcalTransmitters = transmitTransceivers.ToArray();
             selcalInput.Play(code);
+            var txIds = transmitTransceivers.Select(t => t.ID).ToList();
+            var scIds = new List<ushort>();
+            foreach(var soundcard in soundcards.Where(s=>s.TransceiverIds.Any(id=>txIds.Contains(id))))
+            {
+                soundcard.Mute(true);
+                scIds.Add(soundcard.ID);
+            }
+            selcalMutedSoundcardIds = scIds.ToArray();
         }
 
         /// <summary>

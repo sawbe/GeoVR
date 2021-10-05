@@ -185,6 +185,12 @@ namespace GeoVR.Client
             if (!active)
                 maxDbReadingInPTTInterval = -100;
         }
+
+        internal void Mute(bool active)
+        {
+            soundcardSampleProvider.PTT(active, TransmittingTransceivers);
+        }
+
         internal ISampleProvider GetOutputSampleProvider()
         {
             if (output != null)
