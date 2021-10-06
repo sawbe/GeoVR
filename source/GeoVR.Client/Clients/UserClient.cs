@@ -292,10 +292,10 @@ namespace GeoVR.Client
         /// Transmits a SELCAL code. SELCAL must be enabled when constructing UserClient
         /// </summary>
         /// <param name="code">Capitalized SELCAL code without hyphen eg "ABCD"</param>
-        /// <param name="transmitTransceivers">Transceivers to transmit SELCAL on</param>
+        /// <param name="transmitTransceiversIDs">Transceivers to transmit SELCAL on</param>
         /// <exception cref="System.Exception">Client not started or misconfigured</exception>
         /// <exception cref="System.ArgumentException">Invalid code string</exception>
-        public void TransmitSELCAL(string code, IList<TxTransceiverDto> transmitTransceivers)
+        public void TransmitSELCAL(string code, IList<ushort> transmitTransceiversIDs)
         {
             if (!Started)
                 throw new Exception("Client not started");
@@ -303,11 +303,10 @@ namespace GeoVR.Client
             if (selcalInput == null)
                 throw new Exception("SELCAL was not enabled at constructor");
 
-            selcalTransmitters = transmitTransceivers.ToArray();
+            selcalTransmitters = Array.ConvertAll(transmitTransceiversIDs.ToArray(), id => new TxTransceiverDto() { ID = id });
             selcalInput.Play(code);
-            var txIds = transmitTransceivers.Select(t => t.ID).ToList();
             var scIds = new List<ushort>();
-            foreach(var soundcard in soundcards.Where(s=>s.TransceiverIds.Any(id=>txIds.Contains(id))))
+            foreach(var soundcard in soundcards.Where(s=>s.TransceiverIds.Any(id=> transmitTransceiversIDs.Contains(id))))
             {
                 soundcard.Mute(true);
                 scIds.Add(soundcard.ID);

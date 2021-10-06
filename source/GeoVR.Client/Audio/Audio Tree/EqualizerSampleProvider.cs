@@ -17,17 +17,29 @@ namespace GeoVR.Client
     public class EqualizerSampleProvider : ISampleProvider
     {
         private readonly ISampleProvider sourceProvider;
-        private readonly BiQuadFilter[,] filters;
         private readonly int channels;
-        private readonly int bandCount;
-        private bool updated;
+        private EqualizerPresets equalizerPreset;
+        private BiQuadFilter[,] filters;
+
+        public EqualizerPresets EqualizerPreset
+        {
+            get { return equalizerPreset; }
+            set
+            {
+                equalizerPreset = value;
+                filters = SetupPreset(equalizerPreset, sourceProvider.WaveFormat.SampleRate);
+            }
+        }
+        public WaveFormat WaveFormat => sourceProvider.WaveFormat;
+        public bool Bypass { get; set; }
+        public double OutputGain { get; set; }
 
         public EqualizerSampleProvider(ISampleProvider sourceProvider, EqualizerPresets preset)
         {
             this.sourceProvider = sourceProvider;
             channels = this.sourceProvider.WaveFormat.Channels;
+            equalizerPreset = preset;
             filters = SetupPreset(preset, this.sourceProvider.WaveFormat.SampleRate);
-            bandCount = filters.Length;
             Bypass = false;
             OutputGain = 1.0;
         }
@@ -37,14 +49,10 @@ namespace GeoVR.Client
             this.sourceProvider = sourceProvider;
             channels = this.sourceProvider.WaveFormat.Channels;
             this.filters = filters;
-            bandCount = filters.Length;
+            equalizerPreset = EqualizerPresets.None;
             Bypass = false;
             OutputGain = 1.0;
         }
-
-        public WaveFormat WaveFormat => sourceProvider.WaveFormat;
-        public bool Bypass { get; set; }
-        public double OutputGain { get; set; }
 
         public int Read(float[] buffer, int offset, int count)
         {
@@ -52,19 +60,14 @@ namespace GeoVR.Client
             if (Bypass)
                 return samplesRead;
 
-            if (updated)
-            {
-                // CreateFilters();
-                updated = false;
-            }
-
+            var currentFilters = filters;
             for (int n = 0; n < samplesRead; n++)
             {
                 int ch = n % channels;
 
-                for (int band = 0; band < bandCount; band++)
+                for (int band = 0; band < currentFilters.Length; band++)
                 {
-                    buffer[offset + n] = filters[ch, band].Transform(buffer[offset + n]);
+                    buffer[offset + n] = currentFilters[ch, band].Transform(buffer[offset + n]);
                 }
 
                 buffer[offset + n] *= (float)OutputGain;
@@ -90,6 +93,7 @@ namespace GeoVR.Client
                     }
                     break;
                 case EqualizerPresets.VHFEmulation2:
+                default:
                     filters = new BiQuadFilter[channels, 7];
 
                     for (int i = 0; i < channels; i++)
@@ -103,8 +107,6 @@ namespace GeoVR.Client
                         filters[i, 6] = BiQuadFilterExt.Build(1.0, -1.94022767750807, 0.942630574503006, 1.0, -1.67241244173042, 0.916184578658119);
                     }
                     break;
-                default:
-                    throw new Exception("Preset not defined");
             }
             return filters;
         }
@@ -112,6 +114,7 @@ namespace GeoVR.Client
 
     public enum EqualizerPresets
     {
+        None,
         VHFEmulation = 1,
         VHFEmulation2 = 2,
     }
