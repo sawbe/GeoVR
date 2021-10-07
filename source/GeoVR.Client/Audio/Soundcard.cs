@@ -137,7 +137,7 @@ namespace GeoVR.Client
 
             Started = false;
 
-            output.Stop();
+            output?.Stop();
             if (input?.Started == true)
                 input.Stop();
         }
@@ -165,7 +165,7 @@ namespace GeoVR.Client
 
         internal void ProcessRadioRx(RadioRxDto dto)
         {
-            if(output.Started)
+            if(Started)
                 soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
         }
 
@@ -231,7 +231,7 @@ namespace GeoVR.Client
         /// <param name="ids"></param>
         public void UpdateTransceiverIDs(List<ushort> ids)
         {
-            if (output.Started)
+            if (output?.Started == true)
                 output.Stop();
 
             transceiverIds.Clear();
@@ -239,7 +239,7 @@ namespace GeoVR.Client
             soundcardSampleProvider.UpdateReceiverInputs(ids);
 
             if (Started)
-                output.Start(volumeSampleProvider);
+                output?.Start(volumeSampleProvider);
         }
         /// <summary>
         /// Set output volume
