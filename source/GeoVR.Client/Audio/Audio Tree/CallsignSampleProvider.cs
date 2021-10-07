@@ -263,10 +263,10 @@ namespace GeoVR.Client
 
                 if (receiver.Frequency < 30000000)//HF
                 {
-                    float crackleFactor = (float)(((System.Math.Exp(distanceRatio) * System.Math.Pow(distanceRatio, -4.0)) / 350) - 0.00776652);
+                    //float crackleFactor = (float)(((System.Math.Exp(distanceRatio) * System.Math.Pow(distanceRatio, -4.0)) / 350) - 0.00776652);
 
-                    if (crackleFactor < 0.0f) { crackleFactor = 0.0f; }
-                    if (crackleFactor > 0.20f) { crackleFactor = 0.20f; }
+                    //if (crackleFactor < 0.0f) { crackleFactor = 0.0f; }
+                    //if (crackleFactor > 0.20f) { crackleFactor = 0.20f; }
 
                     vhfWhiteNoise.Gain = 0;
                     hfWhiteNoise.Gain = hfWhiteNoiseGain;
@@ -275,7 +275,7 @@ namespace GeoVR.Client
                     if (voiceEq.EqualizerPreset != AudioConfig.Instance.HfEqualizer)
                         voiceEq.EqualizerPreset = AudioConfig.Instance.HfEqualizer;
                     voiceEq.Bypass = false;
-                    voiceEq.OutputGain = 0.38f;
+                    voiceEq.OutputGain = 0.20f;
                 }
                 else
                 {
