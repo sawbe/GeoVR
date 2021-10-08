@@ -270,7 +270,7 @@ namespace GeoVR.Client
 
                     vhfWhiteNoise.Gain = 0;
                     hfWhiteNoise.Gain = hfWhiteNoiseGain;
-                    acBusNoise.Gain = acBusGain;
+                    acBusNoise.Gain = 0.001f;
                     simpleCompressorEffect.Enabled = true;
                     if (voiceEq.EqualizerPreset != AudioConfig.Instance.HfEqualizer)
                         voiceEq.EqualizerPreset = AudioConfig.Instance.HfEqualizer;
