@@ -47,6 +47,7 @@ namespace GeoVR.Client
                 }
                 frequency = value;
                 SetHfNoise();
+                SetHfCrackle();
             }
         }
 
@@ -72,12 +73,16 @@ namespace GeoVR.Client
                     }
                 }
                 SetHfNoise();
+                SetHfCrackle();
             }
         }
 
         private const float clickGain = 1.1f;
         private const double blockToneGain = 0.13f;
         private const float hfWhiteNoiseGain = 0.10f;
+        private const float hfCrackleMaxGain = 0.08f;
+        private const float hfCrackleMinGain = 0.005f;
+        private const int crackleGainUpdateInterval = 696;
 
         public ushort ID { get; private set; }
 
@@ -87,10 +92,13 @@ namespace GeoVR.Client
         private readonly MixingSampleProvider mixer;
         private readonly BlockingToneSampleProvider blockTone;
         private readonly ResourceSoundSampleProvider hfWhiteNoise;
+        private readonly ResourceSoundSampleProvider hfCrackleSoundProvider;
         private readonly List<CallsignSampleProvider> voiceInputs;
+        private readonly Random hfCrackleGainGenerator;
 
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
+        private int crackleReadCounter = 0;
         private readonly bool hfSquelchEn = false;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
@@ -113,10 +121,15 @@ namespace GeoVR.Client
 
             blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Frequency = 180, Gain = 0 };
             hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
-
+            hfCrackleSoundProvider = new ResourceSoundSampleProvider(Samples.Instance.Crackle) { Looping = true, Gain = 0 };
+            hfCrackleGainGenerator = new Random();
+            
             mixer.AddMixerInput(blockTone.ToMono());
             if (!AudioConfig.Instance.HfSquelch)
+            {
                 mixer.AddMixerInput(hfWhiteNoise.ToMono());
+                mixer.AddMixerInput(hfCrackleSoundProvider.ToMono());
+            }
             volume = new VolumeSampleProvider(mixer);
 
             hfSquelchEn = AudioConfig.Instance.HfSquelch;
@@ -146,6 +159,12 @@ namespace GeoVR.Client
                 ReceivingCallsignsChanged?.Invoke(this, new TransceiverReceivingCallsignsChangedEventArgs(ID, voiceInputs.Select(x => x.Callsign).Where(x => !string.IsNullOrWhiteSpace(x)).ToList()));
             }
             lastNumberOfInUseInputs = numberOfInUseInputs;
+
+            if(crackleReadCounter++ > crackleGainUpdateInterval && frequency < hfFrequencyUpperLimit)
+            {
+                crackleReadCounter = 0;
+                SetHfCrackle();
+            }
 
             return volume.Read(buffer, offset, count);
         }
@@ -197,6 +216,16 @@ namespace GeoVR.Client
             }
             else
                 hfWhiteNoise.Gain = 0;
+        }
+
+        private void SetHfCrackle()
+        {
+            if (Frequency > 0 && Frequency < hfFrequencyUpperLimit && !Mute)
+            {
+                hfCrackleSoundProvider.Gain = Math.Max(hfCrackleMinGain, (float)(hfCrackleGainGenerator.NextDouble() * hfCrackleMaxGain));
+            }
+            else
+                hfCrackleSoundProvider.Gain = 0;
         }
     }
 }
