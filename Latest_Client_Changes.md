@@ -1,15 +1,15 @@
 
 ### Changes
 
--HF random crackle added
--Fixed bug where HF noise would play when it shouldn't
--HF Uses Separate Equalizer
--AC Bus Noise fixed and tweaked on HF and VHF
--HF sound now loops properly and sound better (clear buffer on silence)
--Multiple Soundcard support
--Selcal Sending from controller client over voice, FSD is used to notify the pilot client of a call still.
--Allow changing of audio settings without stopping and restarting client
--WASAPI now used for Input as well as Output devices
+- HF random crackle added
+- Fixed bug where HF noise would play when it shouldn't
+- HF Uses Separate Equalizer
+- AC Bus Noise fixed and tweaked on HF and VHF
+- HF sound now loops properly and sound better (clear buffer on silence)
+- Multiple Soundcard support
+- Selcal Sending from controller client over voice, FSD is used to notify the pilot client of a call still.
+- Allow changing of audio settings without stopping and restarting client
+- WASAPI now used for Input as well as Output devices
 
 ### Implementation Notes
 Use either `NAudioUserClient` or `UserClient` depending on if you want to reference naudio in your app and supply WASAPI MMDevice's directly or not (friendlynames otherwise).
