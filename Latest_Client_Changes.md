@@ -1,5 +1,5 @@
 
-###Changes
+### Changes
 
 -HF random crackle added
 -Fixed bug where HF noise would play when it shouldn't
@@ -11,7 +11,7 @@
 -Allow changing of audio settings without stopping and restarting client
 -WASAPI now used for Input as well as Output devices
 
-###Implementation Notes
+### Implementation Notes
 Use either `NAudioUserClient` or `UserClient` depending on if you want to reference naudio in your app and supply WASAPI MMDevice's directly or not (friendlynames otherwise).
 
 Then for each radio (input/output device combination) you need to call UserClient.AddSoundcard with devices and transceiver ids (multiple soundcards may use the same transceivers) **before** starting the client with UserClient.Start. 
