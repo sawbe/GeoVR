@@ -21,7 +21,7 @@ namespace GeoVR.Client
 
         private const float vhfWhiteNoiseGain = 0.17f;
         private const float hfWhiteNoiseGain = 0.16f;
-        private const float acBusGain = 0.0028f;
+        private const float acBusGain = 0.005f;
         private const int frameCount = 960;
         private const int idleTimeoutMs = 500;
 
@@ -270,7 +270,7 @@ namespace GeoVR.Client
 
                     vhfWhiteNoise.Gain = 0;
                     hfWhiteNoise.Gain = hfWhiteNoiseGain;
-                    acBusNoise.Gain = acBusGain + 0.001f;
+                    acBusNoise.Gain = acBusGain;
                     simpleCompressorEffect.Enabled = true;
                     if (voiceEq.EqualizerPreset != AudioConfig.Instance.HfEqualizer)
                         voiceEq.EqualizerPreset = AudioConfig.Instance.HfEqualizer;
