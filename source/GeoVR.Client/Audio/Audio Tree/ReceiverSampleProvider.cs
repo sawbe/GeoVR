@@ -160,7 +160,7 @@ namespace GeoVR.Client
             }
             lastNumberOfInUseInputs = numberOfInUseInputs;
 
-            if(crackleReadCounter++ > crackleGainUpdateInterval && frequency < hfFrequencyUpperLimit)
+            if(frequency < hfFrequencyUpperLimit && crackleReadCounter++ > crackleGainUpdateInterval)
             {
                 crackleReadCounter = 0;
                 SetHfCrackle();
