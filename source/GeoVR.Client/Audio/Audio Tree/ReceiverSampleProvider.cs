@@ -20,6 +20,8 @@ namespace GeoVR.Client
         {
             set
             {
+                bypassEffects = value;
+                SetEffects();
                 foreach (var voiceInput in voiceInputs)
                 {
                     voiceInput.BypassEffects = value;
@@ -46,8 +48,7 @@ namespace GeoVR.Client
                     }
                 }
                 frequency = value;
-                SetHfNoise();
-                SetHfCrackle();
+                SetEffects();
             }
         }
 
@@ -72,8 +73,7 @@ namespace GeoVR.Client
                         voiceInput.Clear();
                     }
                 }
-                SetHfNoise();
-                SetHfCrackle();
+                SetEffects();
             }
         }
 
@@ -96,6 +96,7 @@ namespace GeoVR.Client
         private readonly List<CallsignSampleProvider> voiceInputs;
         private readonly Random hfCrackleGainGenerator;
 
+        private bool bypassEffects = false;
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
         private int crackleReadCounter = 0;
@@ -114,7 +115,10 @@ namespace GeoVR.Client
             voiceInputs = new List<CallsignSampleProvider>();
             for (int i = 0; i < voiceInputNumber; i++)
             {
-                var voiceInput = new CallsignSampleProvider(WaveFormat, this);
+                var voiceInput = new CallsignSampleProvider(WaveFormat, this)
+                {
+                    BypassEffects = bypassEffects
+                };
                 voiceInputs.Add(voiceInput);
                 mixer.AddMixerInput(voiceInput);
             };
@@ -184,7 +188,7 @@ namespace GeoVR.Client
             }
 
             voiceInput?.AddOpusSamples(audioDto, distanceRatio);
-            if (frequency > hfFrequencyUpperLimit || hfSquelchEn)
+            if (!bypassEffects && (frequency > hfFrequencyUpperLimit || hfSquelchEn))
                 doClickWhenAppropriate = true;
         }
 
@@ -208,9 +212,15 @@ namespace GeoVR.Client
             //doClickWhenAppropriate = true;
         }
 
+        private void SetEffects()
+        {
+            SetHfNoise();
+            SetHfCrackle();
+        }
+
         private void SetHfNoise()
         {
-            if ((Frequency>0) && (Frequency < hfFrequencyUpperLimit && !Mute))
+            if (!bypassEffects && !Mute && Frequency > 0 && Frequency < hfFrequencyUpperLimit)
             {
                 hfWhiteNoise.Gain = hfWhiteNoiseGain;
             }
@@ -220,7 +230,7 @@ namespace GeoVR.Client
 
         private void SetHfCrackle()
         {
-            if (Frequency > 0 && Frequency < hfFrequencyUpperLimit && !Mute)
+            if (!bypassEffects && !Mute && Frequency > 0 && Frequency < hfFrequencyUpperLimit)
             {
                 hfCrackleSoundProvider.Gain = Math.Max(hfCrackleMinGain, (float)(hfCrackleGainGenerator.NextDouble() * hfCrackleMaxGain));
             }

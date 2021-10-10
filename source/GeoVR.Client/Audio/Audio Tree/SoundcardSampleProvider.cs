@@ -12,8 +12,10 @@ namespace GeoVR.Client
         public WaveFormat WaveFormat { get; private set; }
         public bool BypassEffects
         {
+            get { return bypassEffects; }
             set
             {
+                bypassEffects = value;
                 foreach (var receiverInput in receiverInputs)
                 {
                     receiverInput.BypassEffects = value;
@@ -28,6 +30,8 @@ namespace GeoVR.Client
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> callsignsEventHandler;
 
+        private bool bypassEffects = false;
+
         public SoundcardSampleProvider(int sampleRate, List<ushort> receiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler)
         {
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 1);
@@ -41,7 +45,10 @@ namespace GeoVR.Client
             this.receiverIDs = new List<ushort>();
             foreach (var receiverID in receiverIDs)
             {
-                var receiverInput = new ReceiverSampleProvider(WaveFormat, receiverID, 4);
+                var receiverInput = new ReceiverSampleProvider(WaveFormat, receiverID, 4)
+                {
+                    BypassEffects = bypassEffects
+                };
                 receiverInput.ReceivingCallsignsChanged += eventHandler;
                 receiverInputs.Add(receiverInput);
                 this.receiverIDs.Add(receiverID);
@@ -142,7 +149,10 @@ namespace GeoVR.Client
             var inputsToAdd = transIds.Except(receiverIDs);
             foreach (var id in inputsToAdd)
             {
-                var receiverInput = new ReceiverSampleProvider(WaveFormat, id, 4);
+                var receiverInput = new ReceiverSampleProvider(WaveFormat, id, 4)
+                {
+                    BypassEffects = bypassEffects
+                };
                 receiverInput.ReceivingCallsignsChanged += callsignsEventHandler;
                 receiverInputs.Add(receiverInput);
                 receiverIDs.Add(id);

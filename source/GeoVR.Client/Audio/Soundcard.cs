@@ -38,7 +38,7 @@ namespace GeoVR.Client
         /// <summary>
         /// Bypass radio effects
         /// </summary>
-        public bool BypassEffects { set { soundcardSampleProvider.BypassEffects = value; } }
+        public bool BypassEffects { get => soundcardSampleProvider.BypassEffects; set => soundcardSampleProvider.BypassEffects = value; }
         /// <summary>
         /// Wasapi Device FriendlyName
         /// </summary>
