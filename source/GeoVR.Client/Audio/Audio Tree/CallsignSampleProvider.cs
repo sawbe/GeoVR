@@ -21,7 +21,7 @@ namespace GeoVR.Client
 
         private const float vhfWhiteNoiseGain = 0.17f;
         private const float hfWhiteNoiseGain = 0.16f;
-        private const float acBusGain = 0.0028f;
+        private const float acBusGain = 0.005f;
         private const int frameCount = 960;
         private const int idleTimeoutMs = 500;
 
@@ -261,19 +261,21 @@ namespace GeoVR.Client
             else
             {
 
-                if (receiver.Frequency < 30000000)
+                if (receiver.Frequency < 30000000)//HF
                 {
-                    float crackleFactor = (float)(((System.Math.Exp(distanceRatio) * System.Math.Pow(distanceRatio, -4.0)) / 350) - 0.00776652);
+                    //float crackleFactor = (float)(((System.Math.Exp(distanceRatio) * System.Math.Pow(distanceRatio, -4.0)) / 350) - 0.00776652);
 
-                    if (crackleFactor < 0.0f) { crackleFactor = 0.0f; }
-                    if (crackleFactor > 0.20f) { crackleFactor = 0.20f; }
+                    //if (crackleFactor < 0.0f) { crackleFactor = 0.0f; }
+                    //if (crackleFactor > 0.20f) { crackleFactor = 0.20f; }
 
                     vhfWhiteNoise.Gain = 0;
                     hfWhiteNoise.Gain = hfWhiteNoiseGain;
-                    acBusNoise.Gain = acBusGain + 0.001f;
+                    acBusNoise.Gain = 0.001f;
                     simpleCompressorEffect.Enabled = true;
+                    if (voiceEq.EqualizerPreset != AudioConfig.Instance.HfEqualizer)
+                        voiceEq.EqualizerPreset = AudioConfig.Instance.HfEqualizer;
                     voiceEq.Bypass = false;
-                    voiceEq.OutputGain = 0.38f;
+                    voiceEq.OutputGain = 0.20f;
                 }
                 else
                 {
@@ -288,6 +290,8 @@ namespace GeoVR.Client
                     hfWhiteNoise.Gain = 0;
                     acBusNoise.Gain = acBusGain;
                     simpleCompressorEffect.Enabled = true;
+                    if (voiceEq.EqualizerPreset != AudioConfig.Instance.VhfEqualizer)
+                        voiceEq.EqualizerPreset = AudioConfig.Instance.VhfEqualizer;
                     voiceEq.Bypass = false;
                     voiceEq.OutputGain = 1.0 - crackleFactor * 3.7;
                 }

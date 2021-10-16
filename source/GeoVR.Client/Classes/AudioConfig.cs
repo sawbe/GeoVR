@@ -15,7 +15,8 @@ namespace GeoVR.Client
 
         private AudioConfig()
         {
-            VhfEqualizer = EqualizerPresets.VHFEmulation;
+            HfEqualizer = EqualizerPresets.VHFEmulation;
+            VhfEqualizer = EqualizerPresets.VHFEmulation2;
         }
         //End of singleton pattern
 
@@ -23,6 +24,10 @@ namespace GeoVR.Client
         /// Can not be changed in realtime. Value is latched on UserClient.Start.
         /// </summary>
         public EqualizerPresets VhfEqualizer { get; set; }
+        /// <summary>
+        /// Can not be changed in realtime. Value is latched on UserClient.Start.
+        /// </summary>
+        public EqualizerPresets HfEqualizer { get; set; }
         /// <summary>
         /// Can not be changed in realtime. Value is latched on UserClient.Start.
         /// </summary>

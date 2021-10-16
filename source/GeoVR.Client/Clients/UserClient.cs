@@ -3,20 +3,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using GeoVR.Shared;
-using NAudio.Wave.SampleProviders;
-using NAudio.Utils;
-using System.Net;
-using System.Net.Sockets;
-using RestSharp;
-using Concentus.Structs;
-using Concentus.Enums;
-using System.Diagnostics;
 using NLog;
+using NAudio.CoreAudioApi;
 
 namespace GeoVR.Client
 {
@@ -27,145 +18,187 @@ namespace GeoVR.Client
         private CancellationTokenSource playbackCancelTokenSource;
         private Task taskAudioPlayback;
 
-        private Input input;
-        private Output output;
+        private readonly SelcalInput selcalInput;
+        private TxTransceiverDto[] selcalTransmitters;
+        private ushort[] selcalMutedSoundcardIds;
 
-        private SoundcardSampleProvider soundcardSampleProvider;
-        private VolumeSampleProvider outputSampleProvider;
+        private readonly List<Soundcard> soundcards;
 
-        public bool BypassEffects { set { if (soundcardSampleProvider != null) soundcardSampleProvider.BypassEffects = value; } }
-
-        private bool transmit;
-        private bool transmitHistory = false;
-        private TxTransceiverDto[] transmittingTransceivers;
-
+        /// <summary>
+        /// Sets the bypassing of radio effects on each current soundcard
+        /// </summary>
+        public bool BypassEffects { set { foreach(var soundcard in soundcards)soundcard.BypassEffects = value; } }
+        /// <summary>
+        /// Audio processing started
+        /// </summary>
         public bool Started { get; private set; }
+        /// <summary>
+        /// Time audio processing started
+        /// </summary>
         public DateTime StartDateTimeUtc { get; private set; }
+        /// <summary>
+        /// Array of Soundcards used for Audio IO
+        /// </summary>
+        public Soundcard[] Soundcards => soundcards.ToArray();
+        /// <summary>
+        /// SELCAL finished transmitting
+        /// </summary>
+        public event EventHandler SelcalStopped { add { selcalInput.Stopped += value; } remove { selcalInput.Stopped -= value; } }
 
-        private float inputVolumeDb;
-        public float InputVolumeDb
-        {
-            set
-            {
-                if (value > 18) { value = 18; }
-                if (value < -18) { value = -18; }
-                inputVolumeDb = value;
-                input.Volume = (float)System.Math.Pow(10, value / 20);
-            }
-            get
-            {
-                return inputVolumeDb;
-            }
-        }
+        private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
 
-        private float outputVolume = 1;
-        public float OutputVolumeDb
-        {
-            set
-            {
-                if (value > 18) { value = 18; }
-                if (value < -60) { value = -60; }
-                outputVolume = (float)System.Math.Pow(10, value / 20);
-                if (outputSampleProvider != null)
-                    outputSampleProvider.Volume = outputVolume;
-            }
-        }
-
-        private double maxDbReadingInPTTInterval = -100;
-
-        private CallRequestDto incomingCallRequest = null;
-
-        public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream
-        {
-            add { input.InputVolumeStream += value; }
-            remove { input.InputVolumeStream -= value; }
-        }
-
-        //public event EventHandler<VolumeStreamEventArgs> OutputVolumeStream
-        //{
-
-        //}
-
-        public event EventHandler<CallRequestEventArgs> CallRequest;
-        public event EventHandler<CallResponseEventArgs> CallResponse;
-
-        private EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
-
-        public UserClient(string apiServer, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler) : base(apiServer)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="apiServer"></param>
+        /// <param name="eventHandler">EventHandler for receiving callsign changed events</param>
+        /// <param name="enableSelcal">True if client wishes to transmit selcal</param>
+        public UserClient(string apiServer, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler, bool enableSelcal = false) : base(apiServer)
         {
             this.eventHandler = eventHandler;
-            input = new Input(sampleRate);
-            input.OpusDataAvailable += Input_OpusDataAvailable;
-            input.InputVolumeStream += Input_InputVolumeStream;
-            output = new Output();
+            soundcards = new List<Soundcard>();
+            if(enableSelcal)
+            {
+                selcalInput = new SelcalInput(sampleRate);
+                selcalInput.OpusDataAvailable += SelcalInput_OpusDataAvailable;
+                selcalInput.Stopped += SelcalInput_Stopped;
+            }
             logger.Debug(nameof(UserClient) + " instantiated");
         }
 
-        private void Input_InputVolumeStream(object sender, InputVolumeStreamEventArgs e)
+        private void SelcalInput_Stopped(object sender, EventArgs e)
         {
-            if (transmit)
+            if (selcalMutedSoundcardIds == null)
+                return;
+            foreach(var id in selcalMutedSoundcardIds)
             {
-                //Gather AGC stats
-                if (e.PeakDB > maxDbReadingInPTTInterval)
-                    maxDbReadingInPTTInterval = e.PeakDB;
+                var sc = soundcards.FirstOrDefault(s => s.ID == id);
+                sc?.Mute(false);
             }
         }
 
-        private void Input_OpusDataAvailable(object sender, OpusDataAvailableEventArgs e)
+        private void SelcalInput_OpusDataAvailable(object sender, SelcalInput.SelcalOpusDataAvailableEventArgs e)
         {
-            if (transmittingTransceivers == null)
+            if (selcalTransmitters == null || selcalTransmitters.Length == 0)
             {
+                selcalInput.Stop();
                 return;
             }
 
-            if (transmittingTransceivers.Length > 0)
+            if(Connection.IsConnected)
             {
-                if (transmit)
+                Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
                 {
-                    if (Connection.IsConnected)
-                    {
-                        Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
-                        {
-                            Callsign = Callsign,
-                            SequenceCounter = e.SequenceCounter,
-                            Audio = e.Audio,
-                            LastPacket = false,
-                            Transceivers = transmittingTransceivers
-                        });
-
-                        //Debug.WriteLine("Sending Audio:" + e.SequenceCounter);
-                    }
-                }
-                if (!transmit && transmitHistory)
-                {
-                    if (Connection.IsConnected)
-                    {
-                        Connection.VoiceServerTransmitQueue.Add(new RadioTxDto()
-                        {
-                            Callsign = Callsign,
-                            SequenceCounter = e.SequenceCounter,
-                            Audio = e.Audio,
-                            LastPacket = true,
-                            Transceivers = transmittingTransceivers
-                        });
-                    }
-                }
-                transmitHistory = transmit;
+                    Callsign = Callsign,
+                    SequenceCounter = e.SequenceCounter,
+                    Audio = e.Audio,
+                    LastPacket = e.LastData,
+                    Transceivers = selcalTransmitters
+                });
             }
         }
 
-        public void Start(string outputAudioDevice, List<ushort> transceiverIDs)
+        private void Soundcard_RadioTxAvailable(object sender, SoundcardRadioTxAvailableEventArgs e)
+        {
+            e.RadioTx.Callsign = Callsign;
+            if (Connection.IsConnected)
+                Connection.VoiceServerTransmitQueue.Add(e.RadioTx);
+        }
+
+        /// <summary>
+        /// Adds additional soundcards to allow input and output to multiple audio devices.
+        /// Each soundcard may specify an input and output device, and the corresponding transceiver IDs to process audio for.
+        /// </summary>
+        /// <param name="inputAudioDeviceName">WASAPI Capture Device FriendlyName</param>
+        /// <param name="outputAudioDeviceName">WASAPI Render Device FriendlyName</param>
+        /// <param name="transceiverIDs">IDs of the transceivers to process</param>
+        /// <exception cref="Exception">Client started</exception>
+        public void AddSoundcard(string inputAudioDeviceName, string outputAudioDeviceName, List<ushort> transceiverIDs)
         {
             if (Started)
-            {
+                throw new Exception("Cannot add while client started");
+
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+
+            AddSoundcard(input, output, transceiverIDs);
+        }
+
+        protected void AddSoundcard(MMDevice inputDevice, MMDevice outputDevice, List<ushort> transceiverIDs)
+        {
+            Soundcard s = new Soundcard(inputDevice, outputDevice, sampleRate, transceiverIDs, eventHandler);
+            s.RadioTxAvailable += Soundcard_RadioTxAvailable;
+            soundcards.Add(s);
+
+            logger.Debug($"Added Soundcard [Input:{inputDevice?.FriendlyName} Output:{outputDevice?.FriendlyName}]");
+        }
+
+        /// <summary>
+        /// Removes all soundcards
+        /// </summary>
+        /// <exception cref="Exception">Client started</exception>
+        public void RemoveSoundcards()
+        {
+            if (Started)
+                throw new Exception("Cannot remove while client started");
+
+            soundcards.Clear();
+        }
+
+        /// <summary>
+        /// Starts the audio client with one Soundcard
+        /// </summary>
+        /// <param name="outputAudioDeviceName">WASAPI Render Device FriendlyName</param>
+        /// <param name="transceiverIDs">IDs of the transceivers to process</param>
+        /// <exception cref="Exception">Client already started</exception>
+        public void Start(string outputAudioDeviceName, List<ushort> transceiverIDs)
+        {
+            if (Started)
                 throw new Exception("Client already started");
-            }
 
-            soundcardSampleProvider = new SoundcardSampleProvider(sampleRate, transceiverIDs, eventHandler);
-            outputSampleProvider = new VolumeSampleProvider(soundcardSampleProvider);
-            outputSampleProvider.Volume = outputVolume;
+            soundcards.Clear();
 
-            output.Start(outputAudioDevice, outputSampleProvider);
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            AddSoundcard(null, output, transceiverIDs);
+            Start();
+        }
+
+        /// <summary>
+        /// Starts the audio client with one Soundcard
+        /// </summary>
+        /// <param name="inputAudioDevice">WASAPI Capture Device FriendlyName<</param>
+        /// <param name="outputAudioDevice">WASAPI Render Device FriendlyName<</param>
+        /// <param name="transceiverIDs">IDs of the transceivers to process</param>
+        /// <exception cref="Exception">Client already started</exception>
+        public void Start(string inputAudioDeviceName, string outputAudioDeviceName, List<ushort> transceiverIDs)
+        {
+            if (Started)
+                throw new Exception("Client already started");
+
+            soundcards.Clear();
+
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+            AddSoundcard(input, output, transceiverIDs);
+            Start();
+        }
+
+        /// <summary>
+        /// Start audio client
+        /// Must have already called AddSoundCard to use this method
+        /// </summary>
+        /// <exception cref="Exception">Client already started</exception>
+        /// <exception cref="Exception">No soundcards defined</exception>
+        public void Start()
+        {
+            if (Started)
+                throw new Exception("Client already started");
+
+            if (soundcards.Count == 0)
+                throw new Exception("No soundcards defined");
+
+            foreach (var soundcard in soundcards)
+                soundcard.Start();
 
             playbackCancelTokenSource = new CancellationTokenSource();
             taskAudioPlayback = new Task(() => TaskAudioPlayback(logger, playbackCancelTokenSource.Token, Connection.VoiceServerReceiveQueue), TaskCreationOptions.LongRunning);
@@ -175,33 +208,12 @@ namespace GeoVR.Client
 
             Connection.ReceiveAudio = true;
             Started = true;
-            logger.Debug("Started [Input: None] [Output: " + outputAudioDevice + "]");
+            logger.Debug($"Started [Soundcards {soundcards.Count}]");
         }
 
-        public void Start(string inputAudioDevice, string outputAudioDevice, List<ushort> transceiverIDs)
-        {
-            if (Started)
-                throw new Exception("Client already started");
-
-            soundcardSampleProvider = new SoundcardSampleProvider(sampleRate, transceiverIDs, eventHandler);
-            outputSampleProvider = new VolumeSampleProvider(soundcardSampleProvider);
-            outputSampleProvider.Volume = outputVolume;
-
-            output.Start(outputAudioDevice, outputSampleProvider);
-
-            playbackCancelTokenSource = new CancellationTokenSource();
-            taskAudioPlayback = new Task(() => TaskAudioPlayback(logger, playbackCancelTokenSource.Token, Connection.VoiceServerReceiveQueue), TaskCreationOptions.LongRunning);
-            taskAudioPlayback.Start();
-
-            input.Start(inputAudioDevice);
-
-            StartDateTimeUtc = DateTime.UtcNow;
-
-            Connection.ReceiveAudio = true;
-            Started = true;
-            logger.Debug("Started [Input: " + inputAudioDevice + "] [Output: " + outputAudioDevice + "]");
-        }
-
+        /// <summary>
+        /// Stops the audio client
+        /// </summary>
         public void Stop()
         {
             if (!Started)
@@ -211,85 +223,106 @@ namespace GeoVR.Client
             Connection.ReceiveAudio = false;
             logger.Debug("Stopped");
 
-            input.Stop();
+            foreach (var soundcard in soundcards)
+                soundcard.Stop();
 
             playbackCancelTokenSource.Cancel();
             taskAudioPlayback.Wait();
             taskAudioPlayback = null;
 
-            output.Stop();
-
             while (Connection.VoiceServerReceiveQueue.TryTake(out _)) { }        //Clear the VoiceServerReceiveQueue.
         }
 
-        public void TransmittingTransceivers(ushort transceiverID)
+        /// <summary>
+        /// Change the input device used by a soundcard
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="inputAudioDeviceName">WASAPI Capture FriendlyName</param>
+        public void ChangeSoundcardInputDevice(Soundcard soundcard, string inputAudioDeviceName)
         {
-            TransmittingTransceivers(new TxTransceiverDto[] { new TxTransceiverDto() { ID = transceiverID } });
+            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+            ChangeSoundcardInputDevice(soundcard, input);
+        }
+        protected void ChangeSoundcardInputDevice(Soundcard soundcard, MMDevice device)
+        {
+            soundcard.ChangeInputDevice(device);
+        }
+        /// <summary>
+        /// Change the output device used by a soundcard
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="outputAudioDeviceName">WASAPI Render FriendlyName</param>
+        public void ChangeSoundcardOutputDevice(Soundcard soundcard, string outputAudioDeviceName)
+        {
+            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            ChangeSoundcardOutputDevice(soundcard, output);
+        }
+        protected void ChangeSoundcardOutputDevice(Soundcard soundcard, MMDevice device)
+        {
+            soundcard.ChangeOutputDevice(device);
         }
 
-        public void TransmittingTransceivers(TxTransceiverDto[] transceivers)
-        {
-            transmittingTransceivers = transceivers;
-        }
-
+        /// <summary>
+        /// Sets Push to Talk state for first soundcard
+        /// </summary>
+        /// <param name="active">PTT down</param>
         public void PTT(bool active)
         {
-            if (!Started)
-                throw new Exception("Client not started");
-
-            if (transmit == active)     //Ignore repeated keyboard events
-                return;
-
-            transmit = active;
-            soundcardSampleProvider.PTT(active, transmittingTransceivers);
-
-            if (!active)
-            {
-                //AGC
-                //if (maxDbReadingInPTTInterval > -1)
-                //    InputVolumeDb = InputVolumeDb - 1;
-                //if(maxDbReadingInPTTInterval < -4)
-                //    InputVolumeDb = InputVolumeDb + 1;
-                maxDbReadingInPTTInterval = -100;
-            }
-
-            logger.Debug("PTT: " + active.ToString());
+            PTT(soundcards[0], active);
         }
 
-        public void RequestCall(string callsign)
+        /// <summary>
+        /// Sets Push to Talk state for nominated Soundcard. 
+        /// If another soundcard is currently transmitting on a shared transceiver, PTT will be blocked
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="active">PTT down</param>
+        public void PTT(Soundcard soundcard, bool active)
+        {
+            var reqIds = soundcard.TransmittingTransceivers.Select(t => t.ID);
+            if (!active || !soundcards.Any(s => s != soundcard && s.TransmittingTransceivers.Select(t => t.ID).Intersect(reqIds).Any()))
+            {
+                soundcard.PTT(active);
+            }
+            else
+                logger.Debug("PTT blocked for soundcard " + soundcard.ID);
+        }
+
+        /// <summary>
+        /// Transmits a SELCAL code. SELCAL must be enabled when constructing UserClient
+        /// </summary>
+        /// <param name="code">Capitalized SELCAL code without hyphen eg "ABCD"</param>
+        /// <param name="transmitTransceiversIDs">Transceivers to transmit SELCAL on</param>
+        /// <exception cref="System.Exception">Client not started or misconfigured</exception>
+        /// <exception cref="System.ArgumentException">Invalid code string</exception>
+        public void TransmitSELCAL(string code, IList<ushort> transmitTransceiversIDs)
         {
             if (!Started)
                 throw new Exception("Client not started");
 
-            Connection.VoiceServerTransmitQueue.Add(new CallRequestDto() { FromCallsign = Callsign, ToCallsign = callsign });
-            //logger.Debug("LandLineRing: " + active.ToString());
-        }
+            if (selcalInput == null)
+                throw new Exception("SELCAL was not enabled at constructor");
 
-        public void RejectCall()
-        {
-            if (incomingCallRequest != null)
+            selcalTransmitters = Array.ConvertAll(transmitTransceiversIDs.ToArray(), id => new TxTransceiverDto() { ID = id });
+            selcalInput.Play(code);
+            var scIds = new List<ushort>();
+            foreach(var soundcard in soundcards.Where(s=>s.TransceiverIds.Any(id=> transmitTransceiversIDs.Contains(id))))
             {
-                soundcardSampleProvider.LandLineRing(false);
-                Connection.VoiceServerTransmitQueue.Add(new CallResponseDto() { Request = incomingCallRequest, Event = CallResponseEvent.Reject });
-                incomingCallRequest = null;
+                soundcard.Mute(true);
+                scIds.Add(soundcard.ID);
             }
+            selcalMutedSoundcardIds = scIds.ToArray();
         }
 
-        public void AcceptCall()
-        {
-            if (incomingCallRequest != null)
-            {
-                soundcardSampleProvider.LandLineRing(false);
-                Connection.VoiceServerTransmitQueue.Add(new CallResponseDto() { Request = incomingCallRequest, Event = CallResponseEvent.Accept });
-                incomingCallRequest = null;
-            }
-        }
-
+        /// <summary>
+        /// Updates transceivers that this client is receiving from the server
+        /// </summary>
+        /// <param name="transceivers"></param>
         public override void UpdateTransceivers(List<TransceiverDto> transceivers)
         {
             base.UpdateTransceivers(transceivers);
-            if (soundcardSampleProvider != null)
-                soundcardSampleProvider.UpdateTransceivers(transceivers);
+            foreach (var soundcard in soundcards)
+                soundcard.UpdateTransceivers(transceivers);
         }
 
         private void TaskAudioPlayback(Logger logger, CancellationToken cancelToken, BlockingCollection<IMsgPackTypeName> queue)
@@ -303,59 +336,13 @@ namespace GeoVR.Client
                         case nameof(RadioRxDto):
                             {
                                 var dto = (RadioRxDto)data;
-                                soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
+                                foreach (var soundcard in soundcards)
+                                    soundcard.ProcessRadioRx(dto);
+
                                 if (logger.IsTraceEnabled)
                                     logger.Trace(dto.ToDebugString());
                                 break;
                             }
-                        case nameof(CallRequestDto):
-                            {
-                                var dto = (CallRequestDto)data;
-                                if (incomingCallRequest != null)
-                                {
-                                    Connection.VoiceServerTransmitQueue.Add(new CallResponseDto() { Request = dto, Event = CallResponseEvent.Busy });
-                                }
-                                else
-                                {
-                                    incomingCallRequest = dto;
-                                    soundcardSampleProvider.LandLineRing(true);
-                                    CallRequest?.Invoke(this, new CallRequestEventArgs() { Callsign = dto.FromCallsign });
-                                }
-                                break;
-                            }
-                        case nameof(CallResponseDto):
-                            {
-                                var dto = (CallResponseDto)data;
-                                switch (dto.Event)
-                                {
-                                    // Server events
-                                    case CallResponseEvent.Routed:
-                                        soundcardSampleProvider.LandLineRing(true);
-                                        CallResponse?.Invoke(this, new CallResponseEventArgs() { Callsign = dto.Request.ToCallsign, Event = CallResponseEvent.Routed });        //Our request was routed
-                                        break;
-                                    case CallResponseEvent.NoRoute:
-                                        CallResponse?.Invoke(this, new CallResponseEventArgs() { Callsign = dto.Request.ToCallsign, Event = CallResponseEvent.NoRoute });       //Our request was not routed
-                                        break;
-                                    //Remote party events
-                                    case CallResponseEvent.Busy:
-                                        soundcardSampleProvider.LandLineRing(false);
-                                        //Play busy tone
-                                        CallResponse?.Invoke(this, new CallResponseEventArgs() { Callsign = dto.Request.ToCallsign, Event = CallResponseEvent.Busy });
-                                        break;
-                                    case CallResponseEvent.Accept:
-                                        soundcardSampleProvider.LandLineRing(false);
-                                        CallResponse?.Invoke(this, new CallResponseEventArgs() { Callsign = dto.Request.ToCallsign, Event = CallResponseEvent.Accept });
-                                        break;
-                                    case CallResponseEvent.Reject:
-                                        soundcardSampleProvider.LandLineRing(false);
-                                        //Play reject tone
-                                        CallResponse?.Invoke(this, new CallResponseEventArgs() { Callsign = dto.Request.ToCallsign, Event = CallResponseEvent.Reject });
-                                        break;
-
-                                }
-                                break;
-                            }
-
                     }
                 }
             }

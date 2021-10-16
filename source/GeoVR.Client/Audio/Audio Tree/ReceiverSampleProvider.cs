@@ -20,6 +20,8 @@ namespace GeoVR.Client
         {
             set
             {
+                bypassEffects = value;
+                SetEffects();
                 foreach (var voiceInput in voiceInputs)
                 {
                     voiceInput.BypassEffects = value;
@@ -46,7 +48,7 @@ namespace GeoVR.Client
                     }
                 }
                 frequency = value;
-                SetHfNoise();
+                SetEffects();
             }
         }
 
@@ -71,13 +73,16 @@ namespace GeoVR.Client
                         voiceInput.Clear();
                     }
                 }
-                SetHfNoise();
+                SetEffects();
             }
         }
 
         private const float clickGain = 1.1f;
         private const double blockToneGain = 0.13f;
         private const float hfWhiteNoiseGain = 0.10f;
+        private const float hfCrackleMaxGain = 0.08f;
+        private const float hfCrackleMinGain = 0.005f;
+        private const int crackleGainUpdateInterval = 696;
 
         public ushort ID { get; private set; }
 
@@ -87,11 +92,15 @@ namespace GeoVR.Client
         private readonly MixingSampleProvider mixer;
         private readonly BlockingToneSampleProvider blockTone;
         private readonly ResourceSoundSampleProvider hfWhiteNoise;
+        private readonly ResourceSoundSampleProvider hfCrackleSoundProvider;
         private readonly List<CallsignSampleProvider> voiceInputs;
+        private readonly Random hfCrackleGainGenerator;
 
+        private bool bypassEffects = false;
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
-        private bool hfSquelchEn = false;
+        private int crackleReadCounter = 0;
+        private readonly bool hfSquelchEn = false;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
         {
@@ -106,17 +115,25 @@ namespace GeoVR.Client
             voiceInputs = new List<CallsignSampleProvider>();
             for (int i = 0; i < voiceInputNumber; i++)
             {
-                var voiceInput = new CallsignSampleProvider(WaveFormat, this);
+                var voiceInput = new CallsignSampleProvider(WaveFormat, this)
+                {
+                    BypassEffects = bypassEffects
+                };
                 voiceInputs.Add(voiceInput);
                 mixer.AddMixerInput(voiceInput);
             };
 
             blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Frequency = 180, Gain = 0 };
             hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
-
+            hfCrackleSoundProvider = new ResourceSoundSampleProvider(Samples.Instance.Crackle) { Looping = true, Gain = 0 };
+            hfCrackleGainGenerator = new Random();
+            
             mixer.AddMixerInput(blockTone.ToMono());
             if (!AudioConfig.Instance.HfSquelch)
+            {
                 mixer.AddMixerInput(hfWhiteNoise.ToMono());
+                mixer.AddMixerInput(hfCrackleSoundProvider.ToMono());
+            }
             volume = new VolumeSampleProvider(mixer);
 
             hfSquelchEn = AudioConfig.Instance.HfSquelch;
@@ -147,6 +164,12 @@ namespace GeoVR.Client
             }
             lastNumberOfInUseInputs = numberOfInUseInputs;
 
+            if(frequency < hfFrequencyUpperLimit && crackleReadCounter++ > crackleGainUpdateInterval)
+            {
+                crackleReadCounter = 0;
+                SetHfCrackle();
+            }
+
             return volume.Read(buffer, offset, count);
         }
 
@@ -155,20 +178,17 @@ namespace GeoVR.Client
             if (frequency != this.frequency)        //Lag in the backend means we get the tail end of a transmission if switching frequency in the middle of a transmission
                 return;
 
-            CallsignSampleProvider voiceInput = null;
-
-            if (voiceInputs.Any(i => i.Callsign == audioDto.Callsign))
+            CallsignSampleProvider voiceInput = voiceInputs.FirstOrDefault(b => b.Callsign == audioDto.Callsign);
+            if (voiceInput == null)
             {
-                voiceInput = voiceInputs.First(b => b.Callsign == audioDto.Callsign);
-            }
-            else if (voiceInputs.Any(b => b.InUse == false))
-            {
-                voiceInput = voiceInputs.First(b => b.InUse == false);
+                CallsignSampleProvider notInUseInput = voiceInputs.FirstOrDefault(b => !b.InUse);
+                if (notInUseInput != null)
+                    voiceInput = notInUseInput;
                 voiceInput.Active(audioDto.Callsign, "");
             }
 
             voiceInput?.AddOpusSamples(audioDto, distanceRatio);
-            if (frequency > hfFrequencyUpperLimit || hfSquelchEn)
+            if (!bypassEffects && (frequency > hfFrequencyUpperLimit || hfSquelchEn))
                 doClickWhenAppropriate = true;
         }
 
@@ -176,31 +196,46 @@ namespace GeoVR.Client
         {
             if (frequency != this.frequency)
                 return;
-
-            CallsignSampleProvider voiceInput = null;
-
-            if (voiceInputs.Any(i => i.Callsign == audioDto.Callsign))
+            //CallsignSampleProvider might change Callsign on us between calling .Any and .First. Use FirstAndDefault once instead
+            CallsignSampleProvider voiceInput = voiceInputs.FirstOrDefault(b => b.Callsign == audioDto.Callsign);
+            if (voiceInput == null)
             {
-                voiceInput = voiceInputs.First(b => b.Callsign == audioDto.Callsign);
-            }
-            else if (voiceInputs.Any(b => b.InUse == false))
-            {
-                voiceInput = voiceInputs.First(b => b.InUse == false);
-                voiceInput.ActiveSilent(audioDto.Callsign, "");
+                CallsignSampleProvider notInUseInput = voiceInputs.FirstOrDefault(b => !b.InUse);
+                if (notInUseInput != null)
+                {
+                    voiceInput = notInUseInput;
+                    voiceInput.ActiveSilent(audioDto.Callsign, "");
+                }
             }
 
             voiceInput?.AddSilentSamples(audioDto);
             //doClickWhenAppropriate = true;
         }
 
+        private void SetEffects()
+        {
+            SetHfNoise();
+            SetHfCrackle();
+        }
+
         private void SetHfNoise()
         {
-            if ((Frequency>0) && (Frequency < hfFrequencyUpperLimit && !Mute))
+            if (!bypassEffects && !Mute && Frequency > 0 && Frequency < hfFrequencyUpperLimit)
             {
                 hfWhiteNoise.Gain = hfWhiteNoiseGain;
             }
             else
                 hfWhiteNoise.Gain = 0;
+        }
+
+        private void SetHfCrackle()
+        {
+            if (!bypassEffects && !Mute && Frequency > 0 && Frequency < hfFrequencyUpperLimit)
+            {
+                hfCrackleSoundProvider.Gain = Math.Max(hfCrackleMinGain, (float)(hfCrackleGainGenerator.NextDouble() * hfCrackleMaxGain));
+            }
+            else
+                hfCrackleSoundProvider.Gain = 0;
         }
     }
 }
