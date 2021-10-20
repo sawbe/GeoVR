@@ -182,9 +182,11 @@ namespace GeoVR.Client
             if (voiceInput == null)
             {
                 CallsignSampleProvider notInUseInput = voiceInputs.FirstOrDefault(b => !b.InUse);
-                if (notInUseInput != null)
+                if (notInUseInput != null)//if more than 4 inputs required just do nothing?
+                {
                     voiceInput = notInUseInput;
-                voiceInput.Active(audioDto.Callsign, "");
+                    voiceInput.Active(audioDto.Callsign, "");
+                }
             }
 
             voiceInput?.AddOpusSamples(audioDto, distanceRatio);
