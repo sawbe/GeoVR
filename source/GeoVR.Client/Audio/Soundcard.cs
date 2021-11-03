@@ -17,7 +17,7 @@ namespace GeoVR.Client
     public class Soundcard
     {
         private static ushort soundcardCounter = 0;
-        private readonly Input input;
+        private readonly IInput input;
         private readonly Output output;
         private readonly SoundcardSampleProvider soundcardSampleProvider;
         private readonly VolumeSampleProvider volumeSampleProvider;
@@ -89,14 +89,11 @@ namespace GeoVR.Client
                     volumeSampleProvider.Volume = outputVolume;
             }
         }
+
         /// <summary>
         /// Input volume monitoring
         /// </summary>
-        public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream
-        {
-            add { input.InputVolumeStream += value; }
-            remove { input.InputVolumeStream -= value; }
-        }
+        public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
 
         internal event EventHandler<SoundcardRadioTxAvailableEventArgs> RadioTxAvailable;
 
@@ -108,6 +105,12 @@ namespace GeoVR.Client
             if (inputDevice != null)
             {
                 input = new Input(inputDevice, sampleRate);
+                input.InputVolumeStream += Input_InputVolumeStream;
+                input.OpusDataAvailable += Input_OpusDataAvailable;
+            }
+            else
+            {
+                input = new SampleInput(sampleRate);
                 input.InputVolumeStream += Input_InputVolumeStream;
                 input.OpusDataAvailable += Input_OpusDataAvailable;
             }
@@ -127,7 +130,8 @@ namespace GeoVR.Client
             Started = true;
 
             output?.Start(volumeSampleProvider);
-            input?.Start();
+            if (input is Input deviceInput)
+                deviceInput.Start();
         }
 
         internal void Stop()
@@ -138,7 +142,7 @@ namespace GeoVR.Client
             Started = false;
 
             output?.Stop();
-            if (input?.Started == true)
+            if (input.Started)
                 input.Stop();
         }
 
@@ -150,8 +154,10 @@ namespace GeoVR.Client
                 throw new Exception("Input was never initialized");
 
             if (input.Started)
+            {
                 input.Stop();
-            input.Start(inputDevice);
+                input.Start(inputDevice);
+            }
         }
 
         internal void ChangeOutputDevice(MMDevice outputDevice)
@@ -196,6 +202,10 @@ namespace GeoVR.Client
             if (output != null)
                 throw new Exception("This soundcard has an output device");
             return volumeSampleProvider;
+        }
+        internal void AddInputSamples(byte[] buffer, int offset, int count)
+        {
+            input.AddSamples(buffer, offset, count);
         }
         /// <summary>
         /// Updates transceivers that will receive audio when PTT is active.
@@ -265,6 +275,7 @@ namespace GeoVR.Client
                 if (e.PeakDB > maxDbReadingInPTTInterval)
                     maxDbReadingInPTTInterval = e.PeakDB;
             }
+            InputVolumeStream?.Invoke(this, e);
         }
 
         private void Input_OpusDataAvailable(object sender, OpusDataAvailableEventArgs e)

@@ -91,16 +91,17 @@ namespace GeoVR.Client
         private readonly VolumeSampleProvider volume;
         private readonly MixingSampleProvider mixer;
         private readonly BlockingToneSampleProvider blockTone;
-        private readonly ResourceSoundSampleProvider hfWhiteNoise;
-        private readonly ResourceSoundSampleProvider hfCrackleSoundProvider;
+        private ResourceSoundSampleProvider hfWhiteNoise;
+        private ResourceSoundSampleProvider hfCrackleSoundProvider;
         private readonly List<CallsignSampleProvider> voiceInputs;
-        private readonly Random hfCrackleGainGenerator;
+        private Random hfCrackleGainGenerator;
 
         private bool bypassEffects = false;
         private bool doClickWhenAppropriate = false;
         private int lastNumberOfInUseInputs = 0;
         private int crackleReadCounter = 0;
         private readonly bool hfSquelchEn = false;
+        private bool setHfCrackleOnRead = false;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
         {
@@ -124,16 +125,8 @@ namespace GeoVR.Client
             };
 
             blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Frequency = 180, Gain = 0 };
-            hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
-            hfCrackleSoundProvider = new ResourceSoundSampleProvider(Samples.Instance.Crackle) { Looping = true, Gain = 0 };
-            hfCrackleGainGenerator = new Random();
-            
+
             mixer.AddMixerInput(blockTone.ToMono());
-            if (!AudioConfig.Instance.HfSquelch)
-            {
-                mixer.AddMixerInput(hfWhiteNoise.ToMono());
-                mixer.AddMixerInput(hfCrackleSoundProvider.ToMono());
-            }
             volume = new VolumeSampleProvider(mixer);
 
             hfSquelchEn = AudioConfig.Instance.HfSquelch;
@@ -164,7 +157,7 @@ namespace GeoVR.Client
             }
             lastNumberOfInUseInputs = numberOfInUseInputs;
 
-            if(frequency < hfFrequencyUpperLimit && crackleReadCounter++ > crackleGainUpdateInterval)
+            if(setHfCrackleOnRead && frequency < hfFrequencyUpperLimit && crackleReadCounter++ > crackleGainUpdateInterval)
             {
                 crackleReadCounter = 0;
                 SetHfCrackle();
@@ -216,8 +209,26 @@ namespace GeoVR.Client
 
         private void SetEffects()
         {
+            if (hfCrackleSoundProvider == null)//check if we should init hf effects (when receiver changes from no frequency, or VHF to HF)
+            {
+                if (!bypassEffects && !hfSquelchEn && Frequency > 0 && Frequency < hfFrequencyUpperLimit)
+                    InitHfEffects();
+                else
+                    return;
+            }
+
             SetHfNoise();
             SetHfCrackle();
+        }
+
+        private void InitHfEffects()
+        {
+            hfWhiteNoise = new ResourceSoundSampleProvider(Samples.Instance.HFWhiteNoise) { Looping = true, Gain = 0 };
+            hfCrackleSoundProvider = new ResourceSoundSampleProvider(Samples.Instance.Crackle) { Looping = true, Gain = 0 };
+            hfCrackleGainGenerator = new Random();
+            mixer.AddMixerInput(hfWhiteNoise.ToMono());
+            mixer.AddMixerInput(hfCrackleSoundProvider.ToMono());
+            setHfCrackleOnRead = true;
         }
 
         private void SetHfNoise()

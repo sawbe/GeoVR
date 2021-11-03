@@ -241,9 +241,8 @@ namespace GeoVR.Client
             //Optimise the following at some point.
             for (int i = 0; i < 960; i++)
             {
-                var bytes = BitConverter.GetBytes(decoderShortBuffer[i]);
-                decoderByteBuffer[i * 2] = bytes[0];
-                decoderByteBuffer[(i * 2) + 1] = bytes[1];
+                decoderByteBuffer[i * 2] = (byte)(decoderShortBuffer[i] & 255);
+                decoderByteBuffer[(i * 2) + 1] = (byte)(decoderShortBuffer[i] >> 8);
             }
         }
 
