@@ -442,22 +442,22 @@ namespace GeoVR.Connection
                 {
                     if (connection.IsConnected && !connection.VoiceServerAlive)
                     {
-                        logger.Error("Lost connection to Voice Server");
+                        logger.Error($"Lost connection to Voice Server. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.LostConnection);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerHeartbeat?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerHeartbeat not running");
+                        logger.Error($"TaskVoiceServerHeartbeat not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError10);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerReceive?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerReceive not running");
+                        logger.Error($"TaskVoiceServerReceive not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError20);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerTransmit?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerTransmit not running");
+                        logger.Error($"TaskVoiceServerTransmit not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError30);
                     }
                     stopWatch.Restart();
