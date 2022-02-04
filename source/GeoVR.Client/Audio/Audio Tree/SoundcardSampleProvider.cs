@@ -66,8 +66,7 @@ namespace GeoVR.Client
             {
                 if (txTransceivers != null && txTransceivers.Length > 0)
                 {
-                    var txTransceiversFiltered = txTransceivers.Where(y => receiverInputs.Keys.Contains(y.ID)).ToList();
-                    foreach (var txTransceiver in txTransceiversFiltered)
+                    foreach (var txTransceiver in txTransceivers)
                     {
                         if(receiverInputs.TryGetValue(txTransceiver.ID, out var rc))
                             rc.Mute = true;
@@ -102,35 +101,31 @@ namespace GeoVR.Client
 
         public void AddOpusSamples(IAudioDto audioDto, List<RxTransceiverDto> rxTransceivers)
         {
-            var rxTransceiversFilteredAndSorted = rxTransceivers.Where(y => receiverInputs.Keys.Contains(y.ID)).OrderByDescending(x => x.DistanceRatio).ToList();
+            var rxTransceiversSorted = rxTransceivers.OrderByDescending(x => x.DistanceRatio);
 
             // The issue in a nutshell - you can have multiple transmitters so the audio DTO contains multiple transceivers with the same ID or
             // you can have multiple receivers so the audio DTO contains multiple transceivers with different IDs, but you only want to play the audio once in either scenario.
 
-            if (rxTransceiversFilteredAndSorted.Count > 0)
+            if (rxTransceiversSorted.Any())
             {
                 bool audioPlayed = false;
                 List<ushort> handledTransceiverIDs = new List<ushort>();
-                for (int i = 0; i < rxTransceiversFilteredAndSorted.Count; i++)
+                foreach(var rxTransceiver in rxTransceiversSorted)
                 {
-                    var rxTransceiver = rxTransceiversFilteredAndSorted[i];
-                    if (!handledTransceiverIDs.Contains(rxTransceiver.ID))
+                    if (!handledTransceiverIDs.Contains(rxTransceiver.ID) && receiverInputs.TryGetValue(rxTransceiver.ID, out var receiverInput))
                     {
                         handledTransceiverIDs.Add(rxTransceiver.ID);
 
-                        if (receiverInputs.TryGetValue(rxTransceiver.ID, out var receiverInput))
+                        if (receiverInput.Mute)
+                            continue;
+                        if (!audioPlayed)
                         {
-                            if (receiverInput.Mute)
-                                continue;
-                            if (!audioPlayed)
-                            {
-                                receiverInput.AddOpusSamples(audioDto, rxTransceiver.Frequency, rxTransceiver.DistanceRatio);
-                                audioPlayed = true;
-                            }
-                            else
-                            {
-                                receiverInput.AddSilentSamples(audioDto, rxTransceiver.Frequency, rxTransceiver.DistanceRatio);
-                            }
+                            receiverInput.AddOpusSamples(audioDto, rxTransceiver.Frequency, rxTransceiver.DistanceRatio);
+                            audioPlayed = true;
+                        }
+                        else
+                        {
+                            receiverInput.AddSilentSamples(audioDto, rxTransceiver.Frequency, rxTransceiver.DistanceRatio);
                         }
                     }
                 }
