@@ -90,6 +90,11 @@ namespace GeoVR.Connection
             if (!connection.IsConnected)
                 throw new Exception("Client not connected");
 
+            if (taskServerConnectionCheck != null && taskServerConnectionCheck.Status == TaskStatus.Running)        //Leftover from previous connection session.
+            {
+                connectionCheckCancelTokenSource.Cancel();
+                taskServerConnectionCheck.Wait();
+            }
             connection.IsConnected = false;
 
             if (!string.IsNullOrWhiteSpace(connection.Callsign))
@@ -101,7 +106,6 @@ namespace GeoVR.Connection
                 catch { }
             }
 
-            connectionCheckCancelTokenSource.Cancel();              //Stops connection check loop
             DisconnectFromVoiceServer();
             if (!autoreconnect)
                 connection.ApiServerConnection.ForceDisconnect();   //Discard the JWT
@@ -144,7 +148,7 @@ namespace GeoVR.Connection
         {
             for (int i = 1; i <= 3; i++)
             {
-                logger.Debug("Reconnection attempt " + i);
+                logger.Info($"Reconnection attempt {i} ({connection.Callsign})");
 
                 try
                 {
@@ -160,7 +164,7 @@ namespace GeoVR.Connection
 
                     connection.IsConnected = true;
                     Connected?.Invoke(this, new ConnectedEventArgs());
-                    logger.Debug("Reconnection success");
+                    logger.Info($"Reconnection success ({connection.Callsign})");
                     return;
                 }
                 catch (Exception ex)
@@ -438,22 +442,22 @@ namespace GeoVR.Connection
                 {
                     if (connection.IsConnected && !connection.VoiceServerAlive)
                     {
-                        logger.Error("Lost connection to Voice Server");
+                        logger.Error($"Lost connection to Voice Server. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.LostConnection);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerHeartbeat?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerHeartbeat not running");
+                        logger.Error($"TaskVoiceServerHeartbeat not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError10);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerReceive?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerReceive not running");
+                        logger.Error($"TaskVoiceServerReceive not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError20);
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerTransmit?.Status != TaskStatus.Running)
                     {
-                        logger.Error("TaskVoiceServerTransmit not running");
+                        logger.Error($"TaskVoiceServerTransmit not running. ({connection.Callsign})");
                         disconnectReason(DisconnectReasons.InternalLibraryError30);
                     }
                     stopWatch.Restart();
