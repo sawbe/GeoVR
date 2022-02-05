@@ -3,6 +3,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 
 namespace GeoVR.Client
@@ -16,7 +17,7 @@ namespace GeoVR.Client
             set
             {
                 bypassEffects = value;
-                foreach (var receiverInput in receiverInputs)
+                foreach (var receiverInput in receiverInputs.Values)
                 {
                     receiverInput.BypassEffects = value;
                 }
@@ -24,8 +25,7 @@ namespace GeoVR.Client
         }
 
         private readonly MixingSampleProvider mixer;
-        private readonly List<ReceiverSampleProvider> receiverInputs;
-        private readonly List<ushort> receiverIDs;
+        private readonly ConcurrentDictionary<ushort, ReceiverSampleProvider> receiverInputs;
         private readonly ResourceSoundSampleProvider landLineRing;
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> callsignsEventHandler;
@@ -41,8 +41,8 @@ namespace GeoVR.Client
                 ReadFully = true
             };
             callsignsEventHandler = eventHandler;
-            receiverInputs = new List<ReceiverSampleProvider>();
-            this.receiverIDs = new List<ushort>();
+            receiverInputs = new ConcurrentDictionary<ushort, ReceiverSampleProvider>();
+
             foreach (var receiverID in receiverIDs)
             {
                 var receiverInput = new ReceiverSampleProvider(WaveFormat, receiverID, 4)
@@ -50,8 +50,8 @@ namespace GeoVR.Client
                     BypassEffects = bypassEffects
                 };
                 receiverInput.ReceivingCallsignsChanged += eventHandler;
-                receiverInputs.Add(receiverInput);
-                this.receiverIDs.Add(receiverID);
+                if (!receiverInputs.TryAdd(receiverInput.ID, receiverInput))
+                    throw new Exception("Receiver ID must be unique");
                 mixer.AddMixerInput(receiverInput);
             }
 
@@ -66,17 +66,16 @@ namespace GeoVR.Client
             {
                 if (txTransceivers != null && txTransceivers.Length > 0)
                 {
-                    var txTransceiversFiltered = txTransceivers.Where(y => receiverIDs.Contains(y.ID)).ToList();
-                    foreach (var txTransceiver in txTransceiversFiltered)
+                    foreach (var txTransceiver in txTransceivers)
                     {
-                        var receiverInput = receiverInputs.First(x => x.ID == txTransceiver.ID);
-                        receiverInput.Mute = true;
+                        if(receiverInputs.TryGetValue(txTransceiver.ID, out var rc))
+                            rc.Mute = true;
                     }
                 }
             }
             else
             {
-                foreach (var receiverInput in receiverInputs)
+                foreach (var receiverInput in receiverInputs.Values)
                 {
                     receiverInput.Mute = false;
                 }
@@ -102,23 +101,21 @@ namespace GeoVR.Client
 
         public void AddOpusSamples(IAudioDto audioDto, List<RxTransceiverDto> rxTransceivers)
         {
-            var rxTransceiversFilteredAndSorted = rxTransceivers.Where(y => receiverIDs.Contains(y.ID)).OrderByDescending(x => x.DistanceRatio).ToList();
+            var rxTransceiversSorted = rxTransceivers.OrderByDescending(x => x.DistanceRatio);
 
             // The issue in a nutshell - you can have multiple transmitters so the audio DTO contains multiple transceivers with the same ID or
             // you can have multiple receivers so the audio DTO contains multiple transceivers with different IDs, but you only want to play the audio once in either scenario.
 
-            if (rxTransceiversFilteredAndSorted.Count > 0)
+            if (rxTransceiversSorted.Any())
             {
                 bool audioPlayed = false;
                 List<ushort> handledTransceiverIDs = new List<ushort>();
-                for (int i = 0; i < rxTransceiversFilteredAndSorted.Count; i++)
+                foreach(var rxTransceiver in rxTransceiversSorted)
                 {
-                    var rxTransceiver = rxTransceiversFilteredAndSorted[i];
-                    if (!handledTransceiverIDs.Contains(rxTransceiver.ID))
+                    if (!handledTransceiverIDs.Contains(rxTransceiver.ID) && receiverInputs.TryGetValue(rxTransceiver.ID, out var receiverInput))
                     {
                         handledTransceiverIDs.Add(rxTransceiver.ID);
 
-                        var receiverInput = receiverInputs.First(x => x.ID == rxTransceiver.ID);
                         if (receiverInput.Mute)
                             continue;
                         if (!audioPlayed)
@@ -137,16 +134,15 @@ namespace GeoVR.Client
 
         public void UpdateReceiverInputs(List<ushort> transIds)
         {
-            var inputsToRemove = receiverInputs.Where(r => !transIds.Contains(r.ID));
+            var inputsToRemove = receiverInputs.Keys.Except(transIds);
             
-            foreach(var rcv in inputsToRemove)
+            foreach(var id in inputsToRemove)
             {
-                mixer.RemoveMixerInput(rcv);
-                receiverIDs.Remove(rcv.ID);
-                receiverInputs.Remove(rcv);
+                if (receiverInputs.TryRemove(id, out var rcv))
+                    mixer.RemoveMixerInput(rcv);
             }
 
-            var inputsToAdd = transIds.Except(receiverIDs);
+            var inputsToAdd = transIds.Except(receiverInputs.Keys);
             foreach (var id in inputsToAdd)
             {
                 var receiverInput = new ReceiverSampleProvider(WaveFormat, id, 4)
@@ -154,9 +150,8 @@ namespace GeoVR.Client
                     BypassEffects = bypassEffects
                 };
                 receiverInput.ReceivingCallsignsChanged += callsignsEventHandler;
-                receiverInputs.Add(receiverInput);
-                receiverIDs.Add(id);
-                mixer.AddMixerInput(receiverInput);
+                if (receiverInputs.TryAdd(id, receiverInput))
+                    mixer.AddMixerInput(receiverInput);
             }
         }
 
@@ -164,17 +159,13 @@ namespace GeoVR.Client
         {
             foreach (var transceiver in transceivers)
             {
-                if (receiverInputs.Any(x => x.ID == transceiver.ID))
-                {
-                    receiverInputs.First(x => x.ID == transceiver.ID).Frequency = transceiver.Frequency;
-                }
+                if (receiverInputs.TryGetValue(transceiver.ID, out var rcv))
+                    rcv.Frequency = transceiver.Frequency;
             }
-            foreach (var transceiverID in receiverInputs.Select(x => x.ID))
+            foreach (var transceiverID in receiverInputs.Keys.Except(transceivers.Select(t=>t.ID)))
             {
-                if (!transceivers.Select(x => x.ID).Contains(transceiverID))
-                {
-                    receiverInputs.First(x => x.ID == transceiverID).Frequency = 0;
-                }
+                if (receiverInputs.TryGetValue(transceiverID, out var rcv))
+                    rcv.Frequency = 0;
             }
         }
     }

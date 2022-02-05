@@ -15,6 +15,11 @@ namespace GeoVR.Client
     public class NAudioUserClient : UserClient
     {
         /// <summary>
+        /// Expected WaveFormat when providing input samples directly via AddSoundcardInputSamples
+        /// </summary>
+        public WaveFormat SampleInputWaveFormat => new WaveFormat(sampleRate, 16, 1);
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="apiServer"></param>
@@ -60,6 +65,17 @@ namespace GeoVR.Client
         public ISampleProvider GetSoundcardSampleProvider(Soundcard soundcard)
         {
             return soundcard.GetOutputSampleProvider();
+        }
+        /// <summary>
+        /// Add audio samples for encoding and sending on the soundcard's TX transceivers 
+        /// TODO: details on sample format
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="offset"></param>
+        /// <param name="count"></param>
+        public void AddSoundcardInputSamples(Soundcard soundcard, byte[] buffer, int offset, int count)
+        {
+            soundcard.AddInputSamples(buffer, offset, count);
         }
     }
 }

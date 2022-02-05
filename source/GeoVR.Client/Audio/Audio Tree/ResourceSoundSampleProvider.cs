@@ -15,7 +15,6 @@ namespace GeoVR.Client
         private readonly ResourceSound resourceSound;
         private long position;
         private const int tempBufferSize = 9600; //9600 = 200ms
-        private readonly float[] tempBuffer = new float[tempBufferSize];
 
         public ResourceSoundSampleProvider(ResourceSound resourceSound)
         {
@@ -40,15 +39,14 @@ namespace GeoVR.Client
             }
             else
             {
-                Array.Copy(resourceSound.AudioData, position, tempBuffer, 0, samplesToCopy);
+                Array.Copy(resourceSound.AudioData, position, buffer, 0, samplesToCopy);
                 if (Gain != 1f)
                 {
                     for (int i = 0; i < samplesToCopy; i++)
                     {
-                        tempBuffer[i] *= Gain;
+                        buffer[i] *= Gain;
                     }
                 }
-                Array.Copy(tempBuffer, 0, buffer, offset, samplesToCopy);
             }
             position += samplesToCopy;
             if (Looping)

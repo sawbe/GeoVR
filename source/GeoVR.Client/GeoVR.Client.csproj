@@ -61,6 +61,8 @@
     <Compile Include="Audio\Audio Tree\BlockingToneSampleProvider.cs" />
     <Compile Include="Audio\CallsignDelayCache.cs" />
     <Compile Include="Audio\Audio Tree\EqualizerSampleProvider.cs" />
+    <Compile Include="Audio\IInput.cs" />
+    <Compile Include="Audio\SampleInput.cs" />
     <Compile Include="Audio\Input.cs" />
     <Compile Include="Audio\LimiterEffect.cs" />
     <Compile Include="Audio\Output.cs" />
