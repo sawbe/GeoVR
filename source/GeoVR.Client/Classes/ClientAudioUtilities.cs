@@ -85,8 +85,8 @@ namespace GeoVR.Client
         public static MMDevice MapWasapiInputDevice(string inputDevice)
         {
             MMDeviceEnumerator em = new MMDeviceEnumerator();
-            var something = em.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
-            return something.First(x => x.FriendlyName == inputDevice);
+            var deviceCollection = em.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
+            return deviceCollection.FirstOrDefault(x => x.FriendlyName == inputDevice) ?? deviceCollection[0];
         }
 
         public static int MapOutputDevice(string outputDevice)
