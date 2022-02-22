@@ -35,6 +35,8 @@ namespace GeoVR.Connection
         public bool ReceiveAudio { get; set; }
 
         public bool IsConnected { get; set; }
+        public bool DisconnectRequested { get; set; }
+        public string DisconnectRequestedReason { get; set; }
 
         public Task TaskVoiceServerTransmit { get; set; }
         public Task TaskVoiceServerReceive { get; set; }

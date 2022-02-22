@@ -9,6 +9,7 @@ namespace GeoVR.Shared
         LostConnection,
         InternalLibraryError10,
         InternalLibraryError20,
-        InternalLibraryError30
+        InternalLibraryError30,
+        Requested
     }
 }

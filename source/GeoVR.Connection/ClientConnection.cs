@@ -60,6 +60,8 @@ namespace GeoVR.Connection
 
             connection.Username = username;
             connection.Callsign = callsign;
+            connection.DisconnectRequested = false;
+            connection.DisconnectRequestedReason = string.Empty;
             await connection.ApiServerConnection.Connect(username, password, client);
 
             await GetVoiceCredentials(callsign);
@@ -82,20 +84,21 @@ namespace GeoVR.Connection
 
         public async Task Disconnect(string reason)       //End-user initiated disconnect
         {
-            await Disconnect(reason, false);
+            connection.DisconnectRequestedReason = reason;
+            connection.DisconnectRequested = true;
+
+            if (taskServerConnectionCheck != null)
+                await taskServerConnectionCheck;//Disco is handled by task
         }
 
-        private async Task Disconnect(string reason, bool autoreconnect)
+        private async Task DoDisconnect(string reason, bool autoreconnect)
         {
             if (!connection.IsConnected)
                 throw new Exception("Client not connected");
 
-            if (taskServerConnectionCheck != null && taskServerConnectionCheck.Status == TaskStatus.Running)        //Leftover from previous connection session.
-            {
-                connectionCheckCancelTokenSource.Cancel();
-                taskServerConnectionCheck.Wait();
-            }
             connection.IsConnected = false;
+            connection.DisconnectRequested = false;
+            connection.DisconnectRequestedReason = string.Empty;
 
             if (!string.IsNullOrWhiteSpace(connection.Callsign))
             {
@@ -115,7 +118,7 @@ namespace GeoVR.Connection
             logger.Debug("Disconnected: " + reason);
         }
 
-        private void InternalDisconnect(DisconnectReasons reason)
+        private async Task InternalDisconnect(DisconnectReasons reason)
         {
             string disconnectReasonString;
             switch (reason)
@@ -132,13 +135,16 @@ namespace GeoVR.Connection
                 case DisconnectReasons.InternalLibraryError30:
                     disconnectReasonString = "Internal library error 30.";
                     break;
+                case DisconnectReasons.Requested:
+                    disconnectReasonString = connection.DisconnectRequestedReason;
+                    break;
                 default:
                     disconnectReasonString = "Unknown error";
                     break;
             }
             bool autoreconnect = reason == DisconnectReasons.LostConnection;
 
-            Task.Run(() => Disconnect(disconnectReasonString, autoreconnect)).Wait();
+            await DoDisconnect(disconnectReasonString, autoreconnect);
 
             if (autoreconnect)
                 Reconnect();
@@ -426,11 +432,11 @@ namespace GeoVR.Connection
             logger.Debug(nameof(TaskVoiceServerHeartbeat) + " stopped");
         }
 
-        private static void TaskServerConnectionCheck(
+        private static async void TaskServerConnectionCheck(
             Logger logger,
             CancellationToken cancelToken,
             ClientConnectionData connection,
-            Action<DisconnectReasons> disconnectReason)
+            Func<DisconnectReasons, Task> disconnectReason)
         {
             logger.Debug(nameof(TaskServerConnectionCheck) + " started");
 
@@ -438,33 +444,42 @@ namespace GeoVR.Connection
             stopWatch.Start();
             while (!cancelToken.IsCancellationRequested)
             {
-                if (stopWatch.ElapsedMilliseconds > 3000)
+                if(connection.IsConnected && connection.DisconnectRequested)
+                {
+                    await disconnectReason(DisconnectReasons.Requested);
+                    break;
+                }
+                else if (stopWatch.ElapsedMilliseconds > 3000)
                 {
                     if (connection.IsConnected && !connection.VoiceServerAlive)
                     {
                         logger.Error($"Lost connection to Voice Server. ({connection.Callsign})");
-                        disconnectReason(DisconnectReasons.LostConnection);
+                        await disconnectReason(DisconnectReasons.LostConnection);
+                        break;
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerHeartbeat?.Status != TaskStatus.Running)
                     {
                         logger.Error($"TaskVoiceServerHeartbeat not running. ({connection.Callsign})");
-                        disconnectReason(DisconnectReasons.InternalLibraryError10);
+                        await disconnectReason(DisconnectReasons.InternalLibraryError10);
+                        break;
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerReceive?.Status != TaskStatus.Running)
                     {
                         logger.Error($"TaskVoiceServerReceive not running. ({connection.Callsign})");
-                        disconnectReason(DisconnectReasons.InternalLibraryError20);
+                        await disconnectReason(DisconnectReasons.InternalLibraryError20);
+                        break;
                     }
                     if (connection.IsConnected && connection.TaskVoiceServerTransmit?.Status != TaskStatus.Running)
                     {
                         logger.Error($"TaskVoiceServerTransmit not running. ({connection.Callsign})");
-                        disconnectReason(DisconnectReasons.InternalLibraryError30);
+                        await disconnectReason(DisconnectReasons.InternalLibraryError30);
+                        break;
                     }
                     stopWatch.Restart();
                 }
-                Thread.Sleep(500);
+                Thread.Sleep(10);
             }
-
+            stopWatch.Stop();
             logger.Debug(nameof(TaskServerConnectionCheck) + " stopped");
         }
     }
