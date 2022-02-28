@@ -28,6 +28,7 @@ namespace GeoVR.Connection
         //Connection checking
         private CancellationTokenSource connectionCheckCancelTokenSource;
         private Task taskServerConnectionCheck;
+        private ManualResetEventSlim requestDisconnectEvent;
 
         //Properties
         //public bool Authenticated { get { return clientConnectionData.ApiServerConnection.Authenticated; } }
@@ -50,6 +51,7 @@ namespace GeoVR.Connection
             VoiceServerReceiveQueue = new BlockingCollection<IMsgPackTypeName>();
             //DataServerTransmitQueue = new BlockingCollection<IMsgPack>();
             //DataServerReceiveQueue = new BlockingCollection<IMsgPack>();
+            requestDisconnectEvent = new ManualResetEventSlim(false);
             logger.Debug(nameof(ClientConnection) + " instantiated");
         }
 
@@ -74,7 +76,7 @@ namespace GeoVR.Connection
             }
 
             connectionCheckCancelTokenSource = new CancellationTokenSource();
-            taskServerConnectionCheck = new Task(() => TaskServerConnectionCheck(logger, connectionCheckCancelTokenSource.Token, connection, InternalDisconnect), TaskCreationOptions.LongRunning);
+            taskServerConnectionCheck = new Task(() => TaskServerConnectionCheck(logger, connectionCheckCancelTokenSource.Token, requestDisconnectEvent, connection, InternalDisconnect), TaskCreationOptions.LongRunning);
             taskServerConnectionCheck.Start();
 
             connection.IsConnected = true;
@@ -86,7 +88,7 @@ namespace GeoVR.Connection
         {
             connection.DisconnectRequestedReason = reason;
             connection.DisconnectRequested = true;
-
+            requestDisconnectEvent.Set();
             if (taskServerConnectionCheck != null)
                 await taskServerConnectionCheck;//Disco is handled by task
         }
@@ -99,6 +101,7 @@ namespace GeoVR.Connection
             connection.IsConnected = false;
             connection.DisconnectRequested = false;
             connection.DisconnectRequestedReason = string.Empty;
+            requestDisconnectEvent.Reset();
 
             if (!string.IsNullOrWhiteSpace(connection.Callsign))
             {
@@ -165,7 +168,7 @@ namespace GeoVR.Connection
                     await Task.Run(() => ConnectToVoiceServer());
 
                     connectionCheckCancelTokenSource = new CancellationTokenSource();
-                    taskServerConnectionCheck = new Task(() => TaskServerConnectionCheck(logger, connectionCheckCancelTokenSource.Token, connection, InternalDisconnect), TaskCreationOptions.LongRunning);
+                    taskServerConnectionCheck = new Task(() => TaskServerConnectionCheck(logger, connectionCheckCancelTokenSource.Token, requestDisconnectEvent, connection, InternalDisconnect), TaskCreationOptions.LongRunning);
                     taskServerConnectionCheck.Start();
 
                     connection.IsConnected = true;
@@ -435,6 +438,7 @@ namespace GeoVR.Connection
         private static async void TaskServerConnectionCheck(
             Logger logger,
             CancellationToken cancelToken,
+            ManualResetEventSlim disconnectEvent,
             ClientConnectionData connection,
             Func<DisconnectReasons, Task> disconnectReason)
         {
@@ -480,7 +484,7 @@ namespace GeoVR.Connection
                         stopWatch.Restart();
                     }
                 }
-                Thread.Sleep(10);
+                disconnectEvent.Wait(500);
             }
             stopWatch.Stop();
             logger.Debug(nameof(TaskServerConnectionCheck) + " stopped");
