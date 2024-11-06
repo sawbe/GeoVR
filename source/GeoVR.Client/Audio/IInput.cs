@@ -1,9 +1,5 @@
-﻿using NAudio.CoreAudioApi;
+﻿using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GeoVR.Client
 {
@@ -16,9 +12,10 @@ namespace GeoVR.Client
         bool Started { get; }
         long OpusBytesEncoded { get; set; }
         float Volume { get; set; }
+        WaveFormat WaveFormat { get; }
 
         void Start();
-        void Start(MMDevice device);
+        void Start(int device);
         void Stop();
         void AddSamples(byte[] buffer, int offset, int count);
     }

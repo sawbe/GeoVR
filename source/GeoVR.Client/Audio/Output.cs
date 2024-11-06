@@ -1,29 +1,32 @@
-﻿using NAudio.CoreAudioApi;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NAudio.PortAudio;
 
 namespace GeoVR.Client
 {
     public class Output
     {
-        private MMDevice outputDevice;
-        private WasapiOut waveOut;
+        private int outputIndex;
+        private string outputDeviceName;
+        private PaOut waveOut;
 
         public bool Started { get; private set; }
 
-        public string DeviceName => outputDevice.FriendlyName;
+        public string DeviceName => outputDeviceName;
+        public event EventHandler Stopped;
 
         /// <summary>
         /// Creates an Output. Call Start(ISampleProvider) to begin playback
         /// </summary>
-        /// <param name="output">WASAPI Render device</param>
-        public Output(MMDevice output)
+        /// <param name="output">PortAudio Output Device Index</param>
+        public Output(int outputIndex)
         {
-            outputDevice = output;
+            this.outputIndex = outputIndex;
+            outputDeviceName = Util.GetDeviceInfo(outputIndex).name;
         }
 
         /// <summary>
@@ -32,12 +35,13 @@ namespace GeoVR.Client
         /// <param name="audioDevice">WASAPI Render device</param>
         /// <param name="sampleProvider">Audio to play</param>
         /// <exception cref="Exception">Output already started</exception>
-        public void Start(MMDevice audioDevice, ISampleProvider sampleProvider)
+        public void Start(int outputIndex, ISampleProvider sampleProvider)
         {
             if (Started)
                 throw new Exception("Output already started");
 
-            outputDevice = audioDevice;
+            this.outputIndex = outputIndex;
+            outputDeviceName = Util.GetDeviceInfo(outputIndex).name;
             Start(sampleProvider);
         }
 
@@ -51,11 +55,18 @@ namespace GeoVR.Client
             if (Started)
                 throw new Exception("Output already started");
 
-            waveOut = new WasapiOut(outputDevice, AudioClientShareMode.Shared, true, 20);
+            waveOut = new PaOut(outputIndex);
+            waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
             waveOut.Init(sampleProvider);
             waveOut.Play();
 
             Started = true;
+        }
+
+        private void WaveOut_PlaybackStopped(object sender, StoppedEventArgs e)
+        {
+            Started = false;
+            Stopped?.Invoke(this, e);
         }
 
         /// <summary>

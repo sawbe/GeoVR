@@ -1,5 +1,4 @@
-﻿using MoreLinq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,6 +26,11 @@ namespace GeoVR.Shared
         public static List<StationTransceiverDto> GetStationTransceiversFullDistinct(this StationTreeDto station)
         {
             return GetStationTransceiversFull(station).DistinctBy(x => x.Name).ToList();
+        }
+
+        public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
+        {
+            return items.GroupBy(property).Select(x => x.First());
         }
 
         //public static void AddTransceivers(this StationTreeDto station, List<TransceiverDto> transceivers)

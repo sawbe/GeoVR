@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System.Timers;
+using Concentus;
 
 namespace GeoVR.Client
 {
@@ -37,7 +38,7 @@ namespace GeoVR.Client
 
         private readonly int frameSize = 960;
 
-        private OpusEncoder encoder;
+        private IOpusEncoder encoder;
 
         private SelcalOpusDataAvailableEventArgs opusDataAvailableArgs;
 
@@ -59,7 +60,7 @@ namespace GeoVR.Client
 
         public SelcalInput(int sampleRate)
         {
-            encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+            encoder = OpusCodecFactory.CreateEncoder(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = 16 * 1024;
 
             signalGeneratorA = new SignalGenerator(sampleRate, 1) { Gain = 0.07, Type = SignalGeneratorType.Sin };
@@ -124,7 +125,7 @@ namespace GeoVR.Client
             }
             else //data available
             {
-                int encodedDataLength = encoder.Encode(signalBuffer, 0, frameSize, encodedSignalBuffer, 0, encodedSignalBuffer.Length);
+                int encodedDataLength = encoder.Encode(signalBuffer, frameSize, encodedSignalBuffer, encodedSignalBuffer.Length);
                 OpusBytesEncoded += encodedDataLength;
 
                 byte[] trimmedBuff = new byte[encodedDataLength];

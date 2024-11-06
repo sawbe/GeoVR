@@ -1,4 +1,5 @@
-﻿using Concentus.Enums;
+﻿using Concentus;
+using Concentus.Enums;
 using Concentus.Structs;
 using GeoVR.Shared;
 using NAudio.Wave;
@@ -19,14 +20,14 @@ namespace GeoVR.Client
     {
         private System.Timers.Timer audioTimer = null;
         private string file;
-        private OpusEncoder encoder;
+        private IOpusEncoder encoder;
 
         public bool Started { get; private set; }
         public DateTime StartDateTimeUtc { get; private set; }
 
         public BotClient(string apiServer) : base(apiServer)                //Connection.ReceiveAudio = false in the base constructor
         {
-            encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+            encoder = OpusCodecFactory.CreateEncoder(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = 16 * 1024;
             Connection.ReceiveAudio = false;
         }
@@ -77,13 +78,14 @@ namespace GeoVR.Client
             byte[] buffer = new byte[bytes];
             reader.Read(buffer, 0, bytes);
 
-            var waveBuffer = ClientAudioUtilities.ConvertBytesTo16BitPCM(buffer);
+            var waveBuffer = ClientAudioUtilities.ConvertBytesTo16BitPCM(buffer, buffer.Length);
 
-            int segmentCount = (int)System.Math.Floor((decimal)waveBuffer.Length / frameSize);
+            int segmentCount = (int)Math.Floor((decimal)waveBuffer.Length / frameSize);
             int bufferOffset = 0;
             for (int i = 0; i < segmentCount; i++)
             {
-                int len = encoder.Encode(waveBuffer, bufferOffset, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+                var bufferSpan = new ReadOnlySpan<short>(waveBuffer, bufferOffset, frameSize - bufferOffset);
+                int len = encoder.Encode(bufferSpan, frameSize, encodedDataBuffer, encodedDataBuffer.Length);
                 bufferOffset += frameSize;
 
                 byte[] trimmedBuff = new byte[len];
@@ -106,7 +108,7 @@ namespace GeoVR.Client
             Array.Clear(lastPacketBuffer, 0, frameSize);
             int remainderSamples = waveBuffer.Length - (segmentCount * frameSize);
             Buffer.BlockCopy(waveBuffer, bufferOffset, lastPacketBuffer, 0, remainderSamples);
-            int lenRemainder = encoder.Encode(lastPacketBuffer, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+            int lenRemainder = encoder.Encode(lastPacketBuffer, frameSize, encodedDataBuffer, encodedDataBuffer.Length);
             byte[] trimmedBuffRemainder = new byte[lenRemainder];
             Buffer.BlockCopy(encodedDataBuffer, 0, trimmedBuffRemainder, 0, lenRemainder);
 

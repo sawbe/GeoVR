@@ -1,5 +1,4 @@
 ﻿using GeoVR.Shared;
-using Newtonsoft.Json;
 using NLog;
 using RestSharp;
 using System;
@@ -7,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace GeoVR.Connection
@@ -17,6 +16,7 @@ namespace GeoVR.Connection
         private const int timeout = 500000;
         private readonly Logger logger = NLog.LogManager.GetCurrentClassLogger();
         private readonly string address;
+        private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         private string jwt;
         private string username;
         private string password;
@@ -43,10 +43,10 @@ namespace GeoVR.Connection
             this.password = password;
             this.client = client;
             var watch = Stopwatch.StartNew();
-            var restClient = new RestClient(address) { Timeout = timeout };
-            var request = new RestRequest("api/v1/auth", Method.POST, DataFormat.Json);
+            var restClient = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
+            var request = new RestRequest("api/v1/auth", Method.Post);
             request.AddJsonBody(new PostUserRequestDto() { Username = username, Password = password, Client = client });
-            IRestResponse response = await restClient.ExecuteTaskAsync(request);
+            var response = await restClient.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("POST api/v1/auth (" + watch.ElapsedMilliseconds + "ms)");
             if (response.ErrorException != null)
@@ -260,16 +260,16 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.GET);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Get);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("GET " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
                 throw new Exception("GET " + resource + " failed (" + response.StatusCode + " - " + response.Content + ")");
 
-            var responseDto = JsonConvert.DeserializeObject<TResponse>(response.Content);
+            var responseDto = JsonSerializer.Deserialize<TResponse>(response.Content, jsonOptions);
             return responseDto;
         }
 
@@ -281,10 +281,10 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.GET);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Get);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("GET " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
@@ -299,18 +299,18 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.POST, DataFormat.Json);
-            var json = JsonConvert.SerializeObject(requestDto);
-            request.AddParameter("application/json", json, null, ParameterType.RequestBody);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Post);
+            var json = JsonSerializer.Serialize(requestDto, jsonOptions);
+            request.AddJsonBody(json);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("POST " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
                 throw new Exception("POST " + resource + " failed (" + response.StatusCode + " - " + response.Content + ")");
 
-            var responseDto = JsonConvert.DeserializeObject<TResponse>(response.Content);
+            var responseDto = JsonSerializer.Deserialize<TResponse>(response.Content, jsonOptions);
             return responseDto;
         }
 
@@ -322,18 +322,18 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.PUT, DataFormat.Json);
-            var json = JsonConvert.SerializeObject(dto);
-            request.AddParameter("application/json", json, null, ParameterType.RequestBody);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Put);
+            var json = JsonSerializer.Serialize(dto, jsonOptions);
+            request.AddJsonBody(json);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("PUT " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
                 throw new Exception("PUT " + resource + " failed (" + response.StatusCode + " - " + response.Content + ")");
 
-            var responseDto = JsonConvert.DeserializeObject<TResponse>(response.Content);
+            var responseDto = JsonSerializer.Deserialize<TResponse>(response.Content, jsonOptions);
             return responseDto;
         }
 
@@ -345,10 +345,10 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.DELETE);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Delete);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("DELETE " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
@@ -363,12 +363,12 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.POST, DataFormat.Json);
-            var json = JsonConvert.SerializeObject(dto);
-            request.AddParameter("application/json", json, null, ParameterType.RequestBody);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Post);
+            var json = JsonSerializer.Serialize(dto, jsonOptions);
+            request.AddJsonBody(json);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("POST " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
@@ -383,16 +383,16 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.POST);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Post);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("POST " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
                 throw new Exception("POST " + resource + " failed (" + response.StatusCode + " - " + response.Content + ")");
 
-            var responseDto = JsonConvert.DeserializeObject<TResponse>(response.Content);
+            var responseDto = JsonSerializer.Deserialize<TResponse>(response.Content, jsonOptions);
             return responseDto;
         }
 
@@ -404,12 +404,12 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.PUT, DataFormat.Json);
-            var json = JsonConvert.SerializeObject(dto);
-            request.AddParameter("application/json", json, null, ParameterType.RequestBody);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Put);
+            var json = JsonSerializer.Serialize(dto, jsonOptions);
+            request.AddJsonBody(json);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("PUT " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
@@ -424,10 +424,10 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.PUT);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Put);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("PUT " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)
@@ -442,10 +442,10 @@ namespace GeoVR.Connection
             await CheckExpiry();
 
             var watch = Stopwatch.StartNew();
-            var client = new RestClient(address) { Timeout = timeout };
+            var client = new RestClient(new RestClientOptions(address) { Timeout = TimeSpan.FromMilliseconds(timeout) });
             client.AddDefaultParameter("Authorization", string.Format("Bearer " + jwt), ParameterType.HttpHeader);
-            var request = new RestRequest(resource, Method.POST);
-            IRestResponse response = await client.ExecuteTaskAsync(request);
+            var request = new RestRequest(resource, Method.Post);
+            var response = await client.ExecuteAsync(request);
             watch.Stop();
             logger.Debug("POST " + resource + " (" + watch.ElapsedMilliseconds + "ms)");
             if (!response.IsSuccessful)

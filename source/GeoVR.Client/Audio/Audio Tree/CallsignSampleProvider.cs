@@ -1,4 +1,5 @@
-﻿using Concentus.Structs;
+﻿using Concentus;
+using Concentus.Structs;
 using GeoVR.Client.Audio;
 using GeoVR.Shared;
 using NAudio.Wave;
@@ -64,7 +65,7 @@ namespace GeoVR.Client
         private readonly byte[] decoderByteBuffer;
         private readonly System.Timers.Timer timer;
 
-        private OpusDecoder decoder;
+        private IOpusDecoder decoder;
         private bool lastPacketLatch;
         private DateTime lastSamplesAddedUtc;
         private bool underflow;
@@ -161,7 +162,7 @@ namespace GeoVR.Client
             Callsign = callsign;
             CallsignDelayCache.Instance.Initialise(callsign);
             Type = aircraftType;
-            decoder = new OpusDecoder(WaveFormat.SampleRate, 1);
+            decoder = OpusCodecFactory.CreateDecoder(WaveFormat.SampleRate, 1);
             InUse = true;
             SetEffects();
             underflow = false;
@@ -181,7 +182,7 @@ namespace GeoVR.Client
             Callsign = callsign;
             CallsignDelayCache.Instance.Initialise(callsign);
             Type = type;
-            decoder = new OpusDecoder(WaveFormat.SampleRate, 1);
+            decoder = OpusCodecFactory.CreateDecoder(WaveFormat.SampleRate, 1);
             InUse = true;
             SetEffects(true);
             underflow = true;
@@ -237,7 +238,7 @@ namespace GeoVR.Client
 
         private void DecodeOpus(byte[] opusData)
         {
-            decoder.Decode(opusData, 0, opusData.Length, decoderShortBuffer, 0, frameCount, false);
+            decoder.Decode(opusData, decoderShortBuffer, frameCount);
             //Optimise the following at some point.
             for (int i = 0; i < 960; i++)
             {

@@ -17,11 +17,12 @@ namespace GeoVR.Client
     public class Soundcard
     {
         private static ushort soundcardCounter = 0;
-        private readonly IInput input;
-        private readonly Output output;
+        private IInput input;
+        private Output output;
         private readonly SoundcardSampleProvider soundcardSampleProvider;
         private readonly VolumeSampleProvider volumeSampleProvider;
         private readonly List<ushort> transceiverIds = new List<ushort>();
+        private readonly int sampleRate;
         private List<TxTransceiverDto> transmitTrans = new List<TxTransceiverDto>();
         private double maxDbReadingInPTTInterval = -100;
         private bool transmitActive;
@@ -39,6 +40,10 @@ namespace GeoVR.Client
         /// Bypass radio effects
         /// </summary>
         public bool BypassEffects { get => soundcardSampleProvider.BypassEffects; set => soundcardSampleProvider.BypassEffects = value; }
+        /// <summary>
+        /// Currently transmitting
+        /// </summary>
+        public bool Transmitting => transmitActive;
         /// <summary>
         /// Wasapi Device FriendlyName
         /// </summary>
@@ -90,21 +95,30 @@ namespace GeoVR.Client
             }
         }
 
+        public WaveFormat OutputWaveFormat => soundcardSampleProvider?.WaveFormat;
+        public WaveFormat InputWaveFormat => input?.WaveFormat;
+
         /// <summary>
         /// Input volume monitoring
         /// </summary>
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
 
+        public event EventHandler Stopped;
+
         internal event EventHandler<SoundcardRadioTxAvailableEventArgs> RadioTxAvailable;
 
-        internal Soundcard(MMDevice inputDevice, MMDevice outputDevice, int sampleRate, List<ushort> transceiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> receivingCallsignsChangedHandler)
+        internal Soundcard(int? inputDevice, int? outputDevice, int sampleRate, List<ushort> transceiverIDs, EventHandler<TransceiverReceivingCallsignsChangedEventArgs> receivingCallsignsChangedHandler)
         {
+            this.sampleRate = sampleRate;
             ID = soundcardCounter++;
-            if(outputDevice != null)
-                output = new Output(outputDevice);
+            if (outputDevice != null)
+            {
+                output = new Output(outputDevice.Value);
+                output.Stopped += Output_Stopped;
+            }
             if (inputDevice != null)
             {
-                input = new Input(inputDevice, sampleRate);
+                input = new Input(inputDevice.Value, sampleRate);
                 input.InputVolumeStream += Input_InputVolumeStream;
                 input.OpusDataAvailable += Input_OpusDataAvailable;
             }
@@ -120,6 +134,13 @@ namespace GeoVR.Client
             {
                 Volume = outputVolume
             };
+        }
+
+        private void Output_Stopped(object sender, EventArgs e)
+        {
+            if (Started)
+                Stop();
+            Stopped?.Invoke(this, e);
         }
 
         internal void Start()
@@ -146,32 +167,45 @@ namespace GeoVR.Client
                 input.Stop();
         }
 
-        internal void ChangeInputDevice(MMDevice inputDevice)
+        internal void ChangeInputDevice(int? inputDevice)
         {
-            if (!Started)
-                throw new Exception("Soundcard must be started first");
-            if (input is null)
-                throw new Exception("Input was never initialized");
-
             if (input.Started)
             {
                 input.Stop();
-                input.Start(inputDevice);
+                if(inputDevice.HasValue)
+                    input.Start(inputDevice.Value);
+            }
+            else if(inputDevice != null)
+            {
+                input.InputVolumeStream -= Input_InputVolumeStream;
+                input.OpusDataAvailable -= Input_OpusDataAvailable;
+
+                input = new Input(inputDevice.Value, sampleRate);
+                input.InputVolumeStream += Input_InputVolumeStream;
+                input.OpusDataAvailable += Input_OpusDataAvailable;
             }
         }
 
-        internal void ChangeOutputDevice(MMDevice outputDevice)
+        internal void ChangeOutputDevice(int? outputDevice)
         {
-            if (!Started)
-                throw new Exception("Soundcard must be started first");
-
-            output.Stop();
-            output.Start(outputDevice, volumeSampleProvider);
+            if (Started)
+            {
+                output.Stop();
+                if (outputDevice.HasValue)
+                    output.Start(outputDevice.Value, volumeSampleProvider);
+            }
+            else if(outputDevice != null)
+            {
+                if (output != null)
+                    output.Stopped -= Output_Stopped;
+                output = new Output(outputDevice.Value);
+                output.Stopped += Output_Stopped;
+            }
         }
 
         internal void ProcessRadioRx(RadioRxDto dto)
         {
-            if(Started)
+            if(Started && output?.Started == true)
                 soundcardSampleProvider.AddOpusSamples(dto, dto.Transceivers);
         }
 
@@ -206,6 +240,14 @@ namespace GeoVR.Client
         internal void AddInputSamples(byte[] buffer, int offset, int count)
         {
             input.AddSamples(buffer, offset, count);
+        }
+        internal void AddMixerOutput(ISampleProvider sampleProvider)
+        {
+            soundcardSampleProvider.AddMixerInput(sampleProvider);
+        }
+        internal void RemoveMixerOutput(ISampleProvider sampleProvider)
+        {
+            soundcardSampleProvider.RemoveMixerInput(sampleProvider);
         }
         /// <summary>
         /// Updates transceivers that will receive audio when PTT is active.
@@ -252,12 +294,22 @@ namespace GeoVR.Client
                 output?.Start(volumeSampleProvider);
         }
         /// <summary>
-        /// Set output volume
+        /// Set master output volume
         /// </summary>
         /// <param name="volume"></param>
         public void SetOutputVolume(float volume)
         {
             volumeSampleProvider.Volume = volume;
+        }
+        /// <summary>
+        /// Set output volume for one of the receivers on 
+        /// this soundcard
+        /// </summary>
+        /// <param name="id">Transceiver Id</param>
+        /// <param name="volume">0.0 - 1.0</param>
+        public void SetReceiverVolume(ushort id, float volume)
+        {
+            soundcardSampleProvider.SetReceiverVolume(id, volume);
         }
         /// <summary>
         /// Set recording volume
@@ -266,6 +318,17 @@ namespace GeoVR.Client
         public void SetInputVolume(float volume)
         {
             input.Volume = volume;
+        }
+
+        /// <summary>
+        /// Enable or disable mute of a receiver
+        /// Use instead of Volume 0.0
+        /// </summary>
+        /// <param name="id">Transceiver Id</param>
+        /// <param name="mute">true to mute</param>
+        public void SetReceiverMute(ushort id, bool mute)
+        {
+            soundcardSampleProvider.SetReceiverMute(mute, id);
         }
         private void Input_InputVolumeStream(object sender, InputVolumeStreamEventArgs e)
         {

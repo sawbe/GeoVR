@@ -56,24 +56,13 @@ namespace GeoVR.Client
 
         public float Volume { get { return volume.Volume; } set { volume.Volume = value; } }
 
-        private bool mute;
+        private bool pttMute;
+        private bool rxMute;
         public bool Mute
         {
             get
             {
-                return mute;
-            }
-            set
-            {
-                mute = value;
-                if (value)
-                {
-                    foreach (var voiceInput in voiceInputs)
-                    {
-                        voiceInput.Clear();
-                    }
-                }
-                SetEffects();
+                return pttMute || rxMute;
             }
         }
 
@@ -205,6 +194,27 @@ namespace GeoVR.Client
 
             voiceInput?.AddSilentSamples(audioDto);
             //doClickWhenAppropriate = true;
+        }
+
+        public void SetMute(bool? ptt = null, bool? rx = null)
+        {
+            if (ptt == null && rx == null)
+                return;
+
+            if (ptt.HasValue)
+                pttMute = ptt.Value;
+            if (rx.HasValue)
+                rxMute = rx.Value;
+
+            if (Mute)
+            {
+                foreach (var voiceInput in voiceInputs)
+                {
+                    voiceInput.Clear();
+                }
+            }
+
+            SetEffects();
         }
 
         private void SetEffects()

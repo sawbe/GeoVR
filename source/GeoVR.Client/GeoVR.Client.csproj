@@ -1,89 +1,19 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D36AF179-EB0E-4CEF-AEE8-68ABD7ABDB38}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>GeoVR.Client</RootNamespace>
-    <AssemblyName>GeoVR.Client</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
     <DocumentationFile>bin\Release\GeoVR.Client.xml</DocumentationFile>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Audio\Audio Tree\BiQuadFilterExt.cs" />
-    <Compile Include="Audio\Audio Tree\Samples.cs" />
-    <Compile Include="Audio\Audio Tree\SoundcardSampleProvider.cs" />
-    <Compile Include="Audio\Audio Tree\CallsignSampleProvider.cs" />
-    <Compile Include="Audio\Audio Tree\BlockingToneSampleProvider.cs" />
-    <Compile Include="Audio\CallsignDelayCache.cs" />
-    <Compile Include="Audio\Audio Tree\EqualizerSampleProvider.cs" />
-    <Compile Include="Audio\IInput.cs" />
-    <Compile Include="Audio\SampleInput.cs" />
-    <Compile Include="Audio\Input.cs" />
-    <Compile Include="Audio\LimiterEffect.cs" />
-    <Compile Include="Audio\Output.cs" />
-    <Compile Include="Audio\ResamplingWasapiCapture.cs" />
-    <Compile Include="Audio\ResourceSound.cs" />
-    <Compile Include="Audio\Audio Tree\ResourceSoundSampleProvider.cs" />
-    <Compile Include="Audio\Audio Tree\ReceiverSampleProvider.cs" />
-    <Compile Include="Audio\SelcalInput.cs" />
-    <Compile Include="Audio\Soundcard.cs" />
-    <Compile Include="CallRequestEventArgs.cs" />
-    <Compile Include="Classes\AudioConfig.cs" />
-    <Compile Include="Clients\BotClient.cs" />
-    <Compile Include="Classes\ClientAudioUtilities.cs" />
-    <Compile Include="Classes\DataServerAcks.cs" />
-    <Compile Include="Clients\BaseClient.cs" />
-    <Compile Include="Clients\IClient.cs" />
-    <Compile Include="Clients\NAudioUserClient.cs" />
-    <Compile Include="Clients\UserClient.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CallResponseEventArgs.cs" />
-  </ItemGroup>
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyTitle>GeoVR.Client</AssemblyTitle>
+    <Product>GeoVR.Client</Product>
+    <Copyright>Copyright © 2021 GeoVR</Copyright>
+    <AssemblyVersion>2.2.0.0</AssemblyVersion>
+    <FileVersion>2.2.0.0</FileVersion>
+  </PropertyGroup>
   <ItemGroup>
     <Content Include="FodyWeavers.xml" />
     <EmbeddedResource Include="Samples\Land_Line_Ring_f32.wav" />
@@ -95,32 +25,25 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Concentus">
-      <Version>1.1.7</Version>
+      <Version>2.2.2</Version>
     </PackageReference>
-    <PackageReference Include="Costura.Fody">
-      <Version>5.5.0</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="NAudio">
-      <Version>2.0.1</Version>
-    </PackageReference>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
     <PackageReference Include="NLog">
-      <Version>4.7.11</Version>
+      <Version>5.3.4</Version>
     </PackageReference>
-    <PackageReference Include="RestSharp">
-      <Version>106.12.0</Version>
-    </PackageReference>
+    <PackageReference Include="System.ComponentModel.Composition" Version="8.0.0" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="1.3.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GeoVR.Connection\GeoVR.Connection.csproj">
-      <Project>{76bf4d77-c008-431a-bc50-74d185c4799f}</Project>
-      <Name>GeoVR.Connection</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\GeoVR.Shared\GeoVR.Shared.csproj">
-      <Project>{f1485964-220b-4596-8dbd-2186cea960e1}</Project>
-      <Name>GeoVR.Shared</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\GeoVR.Connection\GeoVR.Connection.csproj" />
+    <ProjectReference Include="..\GeoVR.Shared\GeoVR.Shared.csproj" />
+    <ProjectReference Include="..\NAudio.PortAudio\NAudio.PortAudio.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Compile Remove="Audio\AfvMeteringSampleProvider.cs" />
+    <Compile Remove="Audio\ResamplingWasapiCapture.cs" />
+  </ItemGroup>
 </Project>

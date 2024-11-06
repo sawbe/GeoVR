@@ -1,179 +1,118 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.Mixer;
+using NAudio.PortAudio;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace GeoVR.Client
 {
-    public class WaveInMixerControls
-    {
-        public UnsignedMixerControl VolumeControl { get; set; }
-        public BooleanMixerControl MuteControl { get; set; }
-        public bool Valid { get { return VolumeControl != null && MuteControl != null; } }
-    }
 
     public static class ClientAudioUtilities
     {
-        public static bool IsInputDevicePresent()
+        private static HostApiType GetBestHostType(bool input)
         {
-            return WaveIn.DeviceCount > 0;
-        }
+            var api = Util.DefaultHostApiType;
+            var testApi = api;
 
-        /// <summary>
-        /// Get available input device names 
-        /// </summary>
-        /// <returns>Active Wasapi Capture device FriendlyNames</returns>
-        public static IEnumerable<string> GetInputDevices()
-        {
-            return GetWasapiInputDevices();
-        }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                testApi = HostApiType.WASAPI;
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                testApi = HostApiType.ALSA;
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                testApi = HostApiType.CoreAudio;
 
-        private static IEnumerable<string> GetWaveInInputDevices()
-        {
-            List<string> inputDevices = new List<string>();
-            for (int i = 0; i < WaveIn.DeviceCount; i++)
+            if (input)
             {
-                //var controls = GetWaveInMixerControls(i);
-                //if (controls.Valid)
-                inputDevices.Add(WaveIn.GetCapabilities(i).ProductName);
+                if (Util.GetHostInputDevices(testApi).Count > 0)
+                    api = testApi;
             }
-            return inputDevices;
-        }
-
-        private static IEnumerable<string> GetWasapiInputDevices()
-        {
-            MMDeviceEnumerator em = new MMDeviceEnumerator();
-            var something = em.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
-            return something.Select(x => x.FriendlyName);
-        }
-
-        public static IEnumerable<string> GetOutputDevices()
-        {
-            return GetWasapiOutputDevices();
-        }
-
-        private static IEnumerable<string> GetWasapiOutputDevices()
-        {
-            MMDeviceEnumerator em = new MMDeviceEnumerator();
-            var something = em.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-            return something.Select(x => x.FriendlyName);
-        }
-
-        private static IEnumerable<string> GetWaveOutOutputDevices()
-        {
-            for (int i = 0; i < WaveOut.DeviceCount; i++)
-            {
-                yield return WaveOut.GetCapabilities(i).ProductName;
-            }
-        }
-
-        public static int MapInputDevice(string inputDevice)
-        {
-            for (int i = 0; i < WaveIn.DeviceCount; i++)
-            {
-                //WaveIn name may be truncated - assume inputDevice is full Wasapi name
-                if (inputDevice.StartsWith(WaveIn.GetCapabilities(i).ProductName))
-                    return i;
-            }
-            return 0;       //Else use default
-        }
-
-        public static MMDevice MapWasapiInputDevice(string inputDevice)
-        {
-            MMDeviceEnumerator em = new MMDeviceEnumerator();
-            var deviceCollection = em.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
-            return deviceCollection.FirstOrDefault(x => x.FriendlyName == inputDevice) ?? deviceCollection[0];
-        }
-
-        public static int MapOutputDevice(string outputDevice)
-        {
-            for (int i = 0; i < WaveOut.DeviceCount; i++)
-            {
-                if (outputDevice.StartsWith(WaveOut.GetCapabilities(i).ProductName))
-                    return i;
-            }
-            return 0;       //Else use default
-        }
-
-        public static MMDevice MapWasapiOutputDevice(string outputDevice)
-        {
-            MMDeviceEnumerator em = new MMDeviceEnumerator();
-            var deviceCollection = em.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-            if (deviceCollection.Any(x => x.FriendlyName == outputDevice))
-                return deviceCollection.First(x => x.FriendlyName == outputDevice);
             else
-                return deviceCollection[0];
-        }
-
-        public static WaveInMixerControls GetWaveInMixerControls(int waveInDevice)
-        {
-            WaveInMixerControls controls = new WaveInMixerControls();
-            var waveInMixerID = MixerLine.GetMixerIdForWaveIn(waveInDevice);
-            Mixer mixer = new Mixer(waveInMixerID);
-            foreach (MixerLine destination in mixer.Destinations)
             {
-                if (destination.ComponentType == MixerLineComponentType.DestinationWaveIn)
-                {
-                    foreach (MixerLine source in destination.Sources)
-                    {
-                        switch (source.ComponentType)
-                        {
-                            case MixerLineComponentType.SourceMicrophone:
-                            case MixerLineComponentType.SourceLine:
-                                foreach (MixerControl control in source.Controls)
-                                {
-                                    switch (control.ControlType)
-                                    {
-                                        case MixerControlType.Volume:
-                                            controls.VolumeControl = (UnsignedMixerControl)control;
-                                            break;
-                                        case MixerControlType.Mute:
-                                            controls.MuteControl = (BooleanMixerControl)control;
-                                            break;
-                                    }
-                                }
-                                break;
-                        }
-                    }
-                }
+                if (Util.GetHostOutputDevices(HostApiType.WASAPI).Count > 0)
+                    api = testApi;
             }
-            return controls;
+            return api;
+        }
+        /// <summary>
+        /// Get ordered list of available device names for:
+        /// 1. Windows - WASAPI
+        /// 2. MACOSX  - CoreAudio
+        /// 3. Linux   - ALSA
+        /// Or the system default if no devices for the above.
+        /// </summary>
+        /// <returns>List of device names</returns>
+        public static IList<string> GetInputDevices()
+        {
+            return Util.GetHostInputDeviceNames(GetBestHostType(true));
+        }
+        /// <summary>
+        /// Get ordered list of available device names for a specific
+        /// audio Host API eg. WASAPI, JACK
+        /// </summary>
+        /// <param name="type">Audio Host API Type</param>
+        /// <returns>List of device names</returns>
+        public static IList<string> GetInputDevices(HostApiType type)
+        {
+            return Util.GetHostInputDeviceNames(type);
+        }
+        public static int? MapInputDevice(string name)
+        {
+            var i = Util.MapInputDevice(GetBestHostType(true), name);
+            if (i < 0)
+                return null;
+            return i;
+        }
+        public static int? MapOutputDevice(string name)
+        {
+            var i = Util.MapOutputDevice(GetBestHostType(false), name);
+            if (i < 0)
+                return null;
+            return i;
+        }
+        public static int? MapInputDevice(HostApiType type, string name)
+        {
+            var i = Util.MapInputDevice(type, name);
+            if (i < 0)
+                return null;
+            return i;
+        }
+        public static int? MapOutputDevice(HostApiType type, string name)
+        {
+            var i = Util.MapOutputDevice(type, name);
+            if (i < 0)
+                return null;
+            return i;
+        }
+        /// <summary>
+        /// Get ordered list of available device names for:
+        /// 1. Windows - WASAPI
+        /// 2. MACOSX  - CoreAudio
+        /// 3. Linux   - ALSA
+        /// Or the system default if no devices for the above.
+        /// </summary>
+        /// <returns>List of device names</returns>
+        public static IList<string> GetOutputDevices()
+        {
+            return Util.GetHostOutputDeviceNames(GetBestHostType(true));
+        }
+        /// <summary>
+        /// Get ordered list of available device names for a specific
+        /// audio Host API eg. WASAPI, JACK
+        /// </summary>
+        /// <param name="type">Audio Host API Type</param>
+        /// <returns>List of device names</returns>
+        public static IList<string> GetOutputDevices(HostApiType type)
+        {
+            return Util.GetHostOutputDeviceNames(type);
         }
 
-        //private static short GetShortFromLittleEndianBytes(byte[] data, int startIndex)
-        //{
-        //    return (short)((data[startIndex + 1] << 8)
-        //         | data[startIndex]);
-        //}
-
-        //private static byte[] GetLittleEndianBytesFromShort(short data)
-        //{
-        //    byte[] b = new byte[2];
-        //    b[0] = (byte)data;
-        //    b[1] = (byte)(data >> 8 & 0xFF);
-        //    return b;
-        //}
-
-        //This is very flawed - makes the sound weird
-        //public static byte[] ToPcm16Bytes(float[] samples)
-        //{
-        //    byte[] output = new byte[samples.Length * 2];
-        //    for (int i = 0; i < samples.Length; i+=2)
-        //    {
-        //        byte[] tmp = GetLittleEndianBytesFromShort(Convert.ToInt16(samples[i] * 32768f));
-        //        output[i] = tmp[0];
-        //        output[i + 1] = tmp[1];
-        //    }
-        //    return output;
-        //}
-
-        public static short[] ConvertBytesTo16BitPCM(byte[] input)
+        public static short[] ConvertBytesTo16BitPCM(byte[] input, int length)
         {
-            int inputSamples = input.Length / 2; // 16 bit input, so 2 bytes per sample
+            int inputSamples = length / 2; // 16 bit input, so 2 bytes per sample
             short[] output = new short[inputSamples];
             int outputIndex = 0;
             for (int n = 0; n < inputSamples; n++)

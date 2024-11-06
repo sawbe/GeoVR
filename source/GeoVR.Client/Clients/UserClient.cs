@@ -44,6 +44,7 @@ namespace GeoVR.Client
         /// SELCAL finished transmitting
         /// </summary>
         public event EventHandler SelcalStopped { add { selcalInput.Stopped += value; } remove { selcalInput.Stopped -= value; } }
+        public event EventHandler<SoundcardStoppedEventArgs> SoundcardStopped;
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> eventHandler;
 
@@ -118,19 +119,33 @@ namespace GeoVR.Client
             if (Started)
                 throw new Exception("Cannot add while client started");
 
-            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
-            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+            var output = ClientAudioUtilities.MapOutputDevice(outputAudioDeviceName);
+            var input = ClientAudioUtilities.MapInputDevice(inputAudioDeviceName);
 
             AddSoundcard(input, output, transceiverIDs);
         }
 
-        protected void AddSoundcard(MMDevice inputDevice, MMDevice outputDevice, List<ushort> transceiverIDs)
+        public void AddSoundcard()
+        {
+            if (Started)
+                throw new Exception("Cannot add while client started");
+
+            AddSoundcard((int?)null, (int?)null, Array.Empty<ushort>().ToList());
+        }
+
+        protected void AddSoundcard(int? inputDevice, int? outputDevice, List<ushort> transceiverIDs)
         {
             Soundcard s = new Soundcard(inputDevice, outputDevice, sampleRate, transceiverIDs, eventHandler);
             s.RadioTxAvailable += Soundcard_RadioTxAvailable;
+            s.Stopped += Soundcard_OutputStopped;
             soundcards.Add(s);
 
-            logger.Debug($"Added Soundcard [Input:{inputDevice?.FriendlyName} Output:{outputDevice?.FriendlyName}]");
+            logger.Debug($"Added Soundcard [Input:{inputDevice} Output:{outputDevice}]");
+        }
+
+        private void Soundcard_OutputStopped(object sender, EventArgs e)
+        {
+            SoundcardStopped?.Invoke(this, new SoundcardStoppedEventArgs(soundcards.IndexOf((Soundcard)sender), e));
         }
 
         /// <summary>
@@ -142,6 +157,11 @@ namespace GeoVR.Client
             if (Started)
                 throw new Exception("Cannot remove while client started");
 
+            foreach (var s in soundcards)
+            {
+                s.Stopped -= Soundcard_OutputStopped;
+                s.RadioTxAvailable -= Soundcard_RadioTxAvailable;
+            }
             soundcards.Clear();
         }
 
@@ -158,7 +178,7 @@ namespace GeoVR.Client
 
             soundcards.Clear();
 
-            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            var output = ClientAudioUtilities.MapOutputDevice(outputAudioDeviceName);
             AddSoundcard(null, output, transceiverIDs);
             Start();
         }
@@ -177,8 +197,8 @@ namespace GeoVR.Client
 
             soundcards.Clear();
 
-            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
-            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+            var output = ClientAudioUtilities.MapOutputDevice(outputAudioDeviceName);
+            var input = ClientAudioUtilities.MapInputDevice(inputAudioDeviceName);
             AddSoundcard(input, output, transceiverIDs);
             Start();
         }
@@ -223,12 +243,12 @@ namespace GeoVR.Client
             Connection.ReceiveAudio = false;
             logger.Debug("Stopped");
 
-            foreach (var soundcard in soundcards)
-                soundcard.Stop();
-
             playbackCancelTokenSource.Cancel();
             taskAudioPlayback.Wait();
             taskAudioPlayback = null;
+
+            foreach (var soundcard in soundcards)
+                soundcard.Stop();
 
             while (Connection.VoiceServerReceiveQueue.TryTake(out _)) { }        //Clear the VoiceServerReceiveQueue.
         }
@@ -240,10 +260,10 @@ namespace GeoVR.Client
         /// <param name="inputAudioDeviceName">WASAPI Capture FriendlyName</param>
         public void ChangeSoundcardInputDevice(Soundcard soundcard, string inputAudioDeviceName)
         {
-            MMDevice input = ClientAudioUtilities.MapWasapiInputDevice(inputAudioDeviceName);
+            var input = ClientAudioUtilities.MapInputDevice(inputAudioDeviceName);
             ChangeSoundcardInputDevice(soundcard, input);
         }
-        protected void ChangeSoundcardInputDevice(Soundcard soundcard, MMDevice device)
+        protected void ChangeSoundcardInputDevice(Soundcard soundcard, int? device)
         {
             soundcard.ChangeInputDevice(device);
         }
@@ -254,10 +274,10 @@ namespace GeoVR.Client
         /// <param name="outputAudioDeviceName">WASAPI Render FriendlyName</param>
         public void ChangeSoundcardOutputDevice(Soundcard soundcard, string outputAudioDeviceName)
         {
-            MMDevice output = ClientAudioUtilities.MapWasapiOutputDevice(outputAudioDeviceName);
+            var output = ClientAudioUtilities.MapOutputDevice(outputAudioDeviceName);
             ChangeSoundcardOutputDevice(soundcard, output);
         }
-        protected void ChangeSoundcardOutputDevice(Soundcard soundcard, MMDevice device)
+        protected void ChangeSoundcardOutputDevice(Soundcard soundcard, int? device)
         {
             soundcard.ChangeOutputDevice(device);
         }
@@ -280,7 +300,7 @@ namespace GeoVR.Client
         public void PTT(Soundcard soundcard, bool active)
         {
             var reqIds = soundcard.TransmittingTransceivers.Select(t => t.ID);
-            if (!active || !soundcards.Any(s => s != soundcard && s.TransmittingTransceivers.Select(t => t.ID).Intersect(reqIds).Any()))
+            if (!active || !soundcards.Any(s => s != soundcard && s.Transmitting && s.TransmittingTransceivers.Select(t => t.ID).Intersect(reqIds).Any()))
             {
                 soundcard.PTT(active);
             }

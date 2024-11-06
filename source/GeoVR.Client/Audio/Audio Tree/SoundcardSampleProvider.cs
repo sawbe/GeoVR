@@ -26,7 +26,6 @@ namespace GeoVR.Client
 
         private readonly MixingSampleProvider mixer;
         private readonly ConcurrentDictionary<ushort, ReceiverSampleProvider> receiverInputs;
-        private readonly ResourceSoundSampleProvider landLineRing;
 
         private readonly EventHandler<TransceiverReceivingCallsignsChangedEventArgs> callsignsEventHandler;
 
@@ -54,10 +53,6 @@ namespace GeoVR.Client
                     throw new Exception("Receiver ID must be unique");
                 mixer.AddMixerInput(receiverInput);
             }
-
-            landLineRing = new ResourceSoundSampleProvider(Samples.Instance.LandLineRing) { Looping = true, Gain = 0 };
-            mixer.AddMixerInput(landLineRing);
-
         }
 
         public void PTT(bool active, TxTransceiverDto[] txTransceivers)
@@ -68,8 +63,8 @@ namespace GeoVR.Client
                 {
                     foreach (var txTransceiver in txTransceivers)
                     {
-                        if(receiverInputs.TryGetValue(txTransceiver.ID, out var rc))
-                            rc.Mute = true;
+                        if (receiverInputs.TryGetValue(txTransceiver.ID, out var rc))
+                            rc.SetMute(ptt: true);
                     }
                 }
             }
@@ -77,21 +72,25 @@ namespace GeoVR.Client
             {
                 foreach (var receiverInput in receiverInputs.Values)
                 {
-                    receiverInput.Mute = false;
+                    receiverInput.SetMute(ptt: false);
                 }
             }
         }
 
-        public void LandLineRing(bool active)
+        public void SetReceiverMute(bool mute, ushort id)
         {
-            if (active)
-            {
-                landLineRing.ResetToStart(1.0f);
-            }
-            else
-            {
-                landLineRing.Gain = 0.0f;
-            }
+            if (receiverInputs.TryGetValue(id, out var recv))
+                recv.SetMute(rx: mute);
+        }
+
+        public void AddMixerInput(ISampleProvider sampleProvider)
+        {
+            mixer.AddMixerInput(sampleProvider);
+        }
+
+        public void RemoveMixerInput(ISampleProvider sampleProvider)
+        {
+            mixer.RemoveMixerInput(sampleProvider);
         }
 
         public int Read(float[] buffer, int offset, int count)
@@ -153,6 +152,12 @@ namespace GeoVR.Client
                 if (receiverInputs.TryAdd(id, receiverInput))
                     mixer.AddMixerInput(receiverInput);
             }
+        }
+
+        public void SetReceiverVolume(ushort transId, float volume)
+        {
+            if(receiverInputs.TryGetValue(transId, out var recv))
+                recv.Volume = volume;
         }
 
         public void UpdateTransceivers(List<TransceiverDto> transceivers)

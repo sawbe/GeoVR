@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
+using ChaCha20Poly1305 = NaCl.Core.ChaCha20Poly1305;
 
 namespace MessagePack.CryptoDto
 {
@@ -29,8 +30,8 @@ namespace MessagePack.CryptoDto
         public CryptoDtoChannel(string channelTag, int receiveSequenceHistorySize = 10)
         {
             ChannelTag = channelTag;
-
-            using (RNGCryptoServiceProvider rnd = new RNGCryptoServiceProvider())
+            
+            using (var rnd = RandomNumberGenerator.Create())
             {
                 aeadReceiveKey = new byte[Aead.KeySize];
                 rnd.GetBytes(aeadReceiveKey);

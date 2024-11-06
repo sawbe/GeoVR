@@ -1,4 +1,5 @@
-﻿using Concentus.Enums;
+﻿using Concentus;
+using Concentus.Enums;
 using Concentus.Structs;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
@@ -26,7 +27,7 @@ namespace GeoVR.Client
         private readonly float maxDb = 0;
         private readonly float minDb = -40;
 
-        private readonly OpusEncoder encoder;
+        private readonly IOpusEncoder encoder;
         private InputVolumeStreamEventArgs inputVolumeStreamArgs;
         private OpusDataAvailableEventArgs opusDataAvailableArgs;
 
@@ -37,6 +38,7 @@ namespace GeoVR.Client
         public bool Started { get; private set; }
         public long OpusBytesEncoded { get; set; }
         public float Volume { get; set; } = 1;
+        public WaveFormat WaveFormat { get; }
 
         /// <summary>
         /// Creates an Input. Start must be called to begin capture
@@ -45,10 +47,11 @@ namespace GeoVR.Client
         public SampleInput(int sampleRate)
         {
             this.sampleRate = sampleRate;
-            encoder = OpusEncoder.Create(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
+            encoder = OpusCodecFactory.CreateEncoder(sampleRate, 1, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = 16 * 1024;
             inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceName = "SampleInput", PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
             opusDataAvailableArgs = new OpusDataAvailableEventArgs();
+            WaveFormat = new WaveFormat(sampleRate, 16, 1);
         }
 
         public void AddSamples(byte[] buffer, int offset, int count)
@@ -74,7 +77,7 @@ namespace GeoVR.Client
 
         private void ProcessBuffer()
         {
-            var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(recordedBuffer);
+            var samples = ClientAudioUtilities.ConvertBytesTo16BitPCM(recordedBuffer, recordedBuffer.Length);
             if (samples.Length != frameSize)
                 throw new Exception("Incorrect number of samples.");
 
@@ -89,7 +92,7 @@ namespace GeoVR.Client
                 samples[i] = (short)value;
             }
 
-            encodedDataLength = encoder.Encode(samples, 0, frameSize, encodedDataBuffer, 0, encodedDataBuffer.Length);
+            encodedDataLength = encoder.Encode(samples, frameSize, encodedDataBuffer, encodedDataBuffer.Length);
             OpusBytesEncoded += encodedDataLength;
 
             //Calculate max and raise event if needed
@@ -139,7 +142,7 @@ namespace GeoVR.Client
             Started = true;
         }
 
-        public void Start(MMDevice device)
+        public void Start(int device)
         {
             Start();
         }

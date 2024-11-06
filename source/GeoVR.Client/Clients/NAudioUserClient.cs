@@ -44,17 +44,17 @@ namespace GeoVR.Client
             AddSoundcard(null, null, transceiverIDs);
         }
 
-        public new void AddSoundcard(MMDevice inputDevice, MMDevice outputDevice, List<ushort> transceiverIDs)
+        public new void AddSoundcard(int? inputDevice, int? outputDevice, List<ushort> transceiverIDs)
         {
             base.AddSoundcard(inputDevice, outputDevice, transceiverIDs);
         }
 
-        public new void ChangeSoundcardInputDevice(Soundcard soundcard, MMDevice device)
+        public new void ChangeSoundcardInputDevice(Soundcard soundcard, int? device)
         {
             base.ChangeSoundcardInputDevice(soundcard, device);
         }
 
-        public new void ChangeSoundcardOutputDevice(Soundcard soundcard, MMDevice device)
+        public new void ChangeSoundcardOutputDevice(Soundcard soundcard, int? device)
         {
             base.ChangeSoundcardOutputDevice(soundcard, device);
         }
@@ -76,6 +76,24 @@ namespace GeoVR.Client
         public void AddSoundcardInputSamples(Soundcard soundcard, byte[] buffer, int offset, int count)
         {
             soundcard.AddInputSamples(buffer, offset, count);
+        }
+        /// <summary>
+        /// Add a sample provider to be mixed with Soundcard output
+        /// eg. for additional effects, sound files etc.
+        /// </summary>
+        /// <param name="soundcard"></param>
+        /// <param name="outputProvider">ISampleProvider in matching WaveFormat</param>
+        public void AddSoundcardMixerOutput(Soundcard soundcard, ISampleProvider outputProvider)
+        {
+            if (!outputProvider.WaveFormat.Equals(outputProvider.WaveFormat))
+                throw new ArgumentException($"{nameof(outputProvider)}.WaveFormat does not match Output WaveFormat");
+
+            soundcard.AddMixerOutput(outputProvider);
+        }
+
+        public void RemoveSoundcardMixerOutput(Soundcard soundcard, ISampleProvider outputProvider)
+        {
+            soundcard.RemoveMixerOutput(outputProvider);
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using ChaCha20Poly1305 = NaCl.Core.ChaCha20Poly1305;
 
 namespace MessagePack.CryptoDto
 {
