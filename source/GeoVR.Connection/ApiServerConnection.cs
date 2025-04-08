@@ -98,6 +98,15 @@ namespace GeoVR.Connection
             logger.Debug("ForceDisconnect");
         }
 
+        /// <summary>
+        /// Heartbeat for bot server. Call every 30-60 seconds when bot should be active
+        /// </summary>
+        /// <param name="callsign">Bot callsign eg. YSSY_ATIS</param>
+        public async Task BotHeartbeat(string callsign)
+        {
+            await GetNoResponse($"api/v1/bots/{callsign}/heartbeat");
+        }
+
         public async Task AddOrUpdateBot(string callsign, PutBotRequestDto addBotRequestDto)
         {
             await PutNoResponse("api/v1/bots/" + callsign, addBotRequestDto);
