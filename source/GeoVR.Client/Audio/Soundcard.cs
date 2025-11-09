@@ -161,9 +161,10 @@ namespace GeoVR.Client
                 throw new Exception("Soundcard not started");
 
             Started = false;
-
-            output?.Stop();
-            if (input.Started)
+            
+            if (output?.Started == true)
+                output.Stop();
+            if (input?.Started == true)
                 input.Stop();
         }
 
