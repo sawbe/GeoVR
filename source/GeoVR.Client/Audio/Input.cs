@@ -24,6 +24,7 @@ namespace GeoVR.Client
         private PaCapture capture;
         private InputVolumeStreamEventArgs inputVolumeStreamArgs;
         private OpusDataAvailableEventArgs opusDataAvailableArgs;
+        private RawInputDataAvailableEventArgs rawEventArgs;
 
         private readonly short[] recordedBuffer = new short[frameSize];
         private readonly byte[] encodedDataBuffer = new byte[maxEncodedBufferSize];
@@ -40,6 +41,7 @@ namespace GeoVR.Client
 
         public event EventHandler<OpusDataAvailableEventArgs> OpusDataAvailable;
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
+        public event EventHandler<RawInputDataAvailableEventArgs> RawInputDataAvailable;
 
         public string DeviceName => inputDeviceName;
         public bool Started { get; private set; }
@@ -93,6 +95,7 @@ namespace GeoVR.Client
 
             inputVolumeStreamArgs = new InputVolumeStreamEventArgs() { DeviceName = inputDeviceName, PeakRaw = 0, PeakDB = float.NegativeInfinity, PeakVU = 0 };
             opusDataAvailableArgs = new OpusDataAvailableEventArgs();
+            rawEventArgs = new RawInputDataAvailableEventArgs() { Buffer = new byte[frameSize * 2], Count = frameSize * 2 };
 
             capture.StartRecording();
 
@@ -136,6 +139,12 @@ namespace GeoVR.Client
 
             for(int f = 0; f < framesRecorded; f++)
             {
+                if(RawInputDataAvailable != null)
+                {
+                    Array.Copy(e.Buffer, f * frameSize * 2, rawEventArgs.Buffer, 0, rawEventArgs.Count);
+                    RawInputDataAvailable.Invoke(this, rawEventArgs);
+                }
+
                 for(int n = 0; n < frameSize; n++)
                 {
                     recordedBuffer[n] = BitConverter.ToInt16(e.Buffer, (f * frameSize) + (n * 2));
@@ -212,6 +221,11 @@ namespace GeoVR.Client
         public byte[] Audio { get; set; }
     }
 
+    public class RawInputDataAvailableEventArgs
+    {
+        public byte[] Buffer { get; set; }
+        public int Count { get; set; }
+    }
     public class InputVolumeStreamEventArgs
     {
         public string DeviceName { get; set; }

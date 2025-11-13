@@ -136,7 +136,8 @@ namespace NAudio.PortAudio
             latency = framesPerBuffer / (double)WaveFormat.SampleRate;
             bytesPerFrame = WaveFormat.Channels * WaveFormat.BitsPerSample / 8;
 
-            File.WriteAllText("debugSaw.txt", $"FrameSize: {framesPerBuffer}\nLatency: {latency}\nSample Rate: {WaveFormat.SampleRate}");
+            File.WriteAllText("debugSaw.txt", $"Input Channels: {devInfo.maxInputChannels} Output Channels: {devInfo.maxOutputChannels} " +
+                $"FrameSize: {framesPerBuffer}\nLatency: {latency}\nSample Rate: {WaveFormat.SampleRate}");
 
             parameters = new StreamParameters()
             {

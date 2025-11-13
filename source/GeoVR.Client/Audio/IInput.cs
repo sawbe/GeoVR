@@ -7,6 +7,7 @@ namespace GeoVR.Client
     {
         event EventHandler<OpusDataAvailableEventArgs> OpusDataAvailable;
         event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
+        event EventHandler<RawInputDataAvailableEventArgs> RawInputDataAvailable;
 
         string DeviceName { get; }
         bool Started { get; }

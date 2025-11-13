@@ -102,6 +102,7 @@ namespace GeoVR.Client
         /// Input volume monitoring
         /// </summary>
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
+        public event EventHandler<RawInputDataAvailableEventArgs> InputDataAvailable;
 
         public event EventHandler Stopped;
 
@@ -121,6 +122,7 @@ namespace GeoVR.Client
                 input = new Input(inputDevice.Value, sampleRate);
                 input.InputVolumeStream += Input_InputVolumeStream;
                 input.OpusDataAvailable += Input_OpusDataAvailable;
+                input.RawInputDataAvailable += Input_RawInputDataAvailable;
             }
             else
             {
@@ -134,6 +136,11 @@ namespace GeoVR.Client
             {
                 Volume = outputVolume
             };
+        }
+
+        private void Input_RawInputDataAvailable(object sender, RawInputDataAvailableEventArgs e)
+        {
+            InputDataAvailable?.Invoke(this, e);
         }
 
         private void Output_Stopped(object sender, EventArgs e)
@@ -180,10 +187,12 @@ namespace GeoVR.Client
             {
                 input.InputVolumeStream -= Input_InputVolumeStream;
                 input.OpusDataAvailable -= Input_OpusDataAvailable;
+                input.RawInputDataAvailable -= Input_RawInputDataAvailable;
 
                 input = new Input(inputDevice.Value, sampleRate);
                 input.InputVolumeStream += Input_InputVolumeStream;
                 input.OpusDataAvailable += Input_OpusDataAvailable;
+                input.RawInputDataAvailable += Input_RawInputDataAvailable;
             }
         }
 
