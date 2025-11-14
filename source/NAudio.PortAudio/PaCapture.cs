@@ -137,7 +137,7 @@ namespace NAudio.PortAudio
             bytesPerFrame = WaveFormat.Channels * WaveFormat.BitsPerSample / 8;
 
             File.AppendAllText("debugSaw.txt", $"\n\nName: {devInfo.name} \nInput Channels: {devInfo.maxInputChannels} Output Channels: {devInfo.maxOutputChannels} " +
-                $"FrameSize: {framesPerBuffer}\nLatency: {latency}\nSample Rate: {WaveFormat.SampleRate}");
+                $"FrameSize: {framesPerBuffer}\nLatency: {latency}\nSample Rate: {WaveFormat.SampleRate} \nSample Format: {sampleFormat}");
 
             parameters = new StreamParameters()
             {
