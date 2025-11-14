@@ -134,17 +134,19 @@ namespace GeoVR.Client
             if (e.BytesRecorded == 0 || e.BytesRecorded < capture.FrameBufferSizeBytes)
                 return;
 
+            if (RawInputDataAvailable != null)
+            {
+                //Array.Copy(e.Buffer, f * frameSize * 2, rawEventArgs.Buffer, 0, rawEventArgs.Count);
+                rawEventArgs.Buffer = e.Buffer;
+                rawEventArgs.Count = e.BytesRecorded;
+                RawInputDataAvailable.Invoke(this, rawEventArgs);
+            }
+
             int newSamples = e.BytesRecorded / 2;
             int framesRecorded = newSamples / frameSize;
 
             for(int f = 0; f < framesRecorded; f++)
             {
-                if(RawInputDataAvailable != null)
-                {
-                    Array.Copy(e.Buffer, f * frameSize * 2, rawEventArgs.Buffer, 0, rawEventArgs.Count);
-                    RawInputDataAvailable.Invoke(this, rawEventArgs);
-                }
-
                 for(int n = 0; n < frameSize; n++)
                 {
                     recordedBuffer[n] = BitConverter.ToInt16(e.Buffer, (f * frameSize) + (n * 2));
