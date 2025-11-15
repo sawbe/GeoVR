@@ -138,7 +138,10 @@ namespace GeoVR.Client
             foreach(var id in inputsToRemove)
             {
                 if (receiverInputs.TryRemove(id, out var rcv))
-                    mixer.RemoveMixerInput(rcv);
+                {
+                    rcv.ReceivingCallsignsChanged -= callsignsEventHandler;
+                    RemoveMixerInput(rcv); 
+                }
             }
 
             var inputsToAdd = transIds.Except(receiverInputs.Keys);
