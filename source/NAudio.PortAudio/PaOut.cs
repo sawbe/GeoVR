@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Utils;
+using NAudio.Wave;
 using System.Runtime.InteropServices;
 using static NAudio.PortAudio.Native;
 
@@ -161,6 +162,7 @@ namespace NAudio.PortAudio
         private StreamCallbackResult OutputCallback(IntPtr input, IntPtr output, uint frameCount, ref StreamCallbackTimeInfo timeInfo, StreamCallbackFlags statusFlags, IntPtr userData)
         {
             int requiredLen = (int)frameCount * bytesPerFrame;
+            buffer = BufferHelpers.Ensure(buffer, requiredLen);
             int len = waveProvider.Read(buffer, 0, requiredLen);
 
             if (len == 0)
