@@ -64,7 +64,7 @@ namespace GeoVR.Client
                     foreach (var txTransceiver in txTransceivers)
                     {
                         if (receiverInputs.TryGetValue(txTransceiver.ID, out var rc))
-                            rc.SetMute(ptt: true);
+                            rc.SetPttMute(true);
                     }
                 }
             }
@@ -72,7 +72,7 @@ namespace GeoVR.Client
             {
                 foreach (var receiverInput in receiverInputs.Values)
                 {
-                    receiverInput.SetMute(ptt: false);
+                    receiverInput.SetPttMute(false);
                 }
             }
         }
@@ -80,7 +80,7 @@ namespace GeoVR.Client
         public void SetReceiverMute(bool mute, ushort id)
         {
             if (receiverInputs.TryGetValue(id, out var recv))
-                recv.SetMute(rx: mute);
+                recv.SetReceiveMute(mute);
         }
 
         public void AddMixerInput(ISampleProvider sampleProvider)

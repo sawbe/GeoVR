@@ -103,6 +103,7 @@ namespace GeoVR.Client
         /// </summary>
         public event EventHandler<InputVolumeStreamEventArgs> InputVolumeStream;
         public event EventHandler<RawInputDataAvailableEventArgs> InputDataAvailable;
+        public event EventHandler<OpusDataAvailableEventArgs> EncodedInputDataAvailable;
 
         public event EventHandler Stopped;
 
@@ -353,6 +354,8 @@ namespace GeoVR.Client
 
         private void Input_OpusDataAvailable(object sender, OpusDataAvailableEventArgs e)
         {
+            EncodedInputDataAvailable?.Invoke(this, e);
+
             if (transmitTrans == null || transmitTrans.Count == 0)
             {
                 return;

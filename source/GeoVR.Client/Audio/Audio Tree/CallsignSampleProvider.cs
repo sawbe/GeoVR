@@ -191,11 +191,11 @@ namespace GeoVR.Client
         private void Idle()
         {
             timer.Stop();
-            InUse = false;
             SetEffects();
             Callsign = "";
             Type = "";
             sequenceCounter = 0;
+            InUse = false;
         }
 
         public void Clear()
@@ -240,11 +240,12 @@ namespace GeoVR.Client
         {
             decoder.Decode(opusData, decoderShortBuffer, frameCount);
             //Optimise the following at some point.
-            for (int i = 0; i < 960; i++)
+            /*for (int i = 0; i < 960; i++)
             {
                 decoderByteBuffer[i * 2] = (byte)(decoderShortBuffer[i] & 255);
                 decoderByteBuffer[(i * 2) + 1] = (byte)(decoderShortBuffer[i] >> 8);
-            }
+            }*/
+            Buffer.BlockCopy(decoderShortBuffer, 0, decoderByteBuffer, 0, frameCount * sizeof(short));
         }
 
         private void SetEffects(bool noEffects = false)

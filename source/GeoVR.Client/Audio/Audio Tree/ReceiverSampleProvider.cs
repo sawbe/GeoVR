@@ -54,17 +54,10 @@ namespace GeoVR.Client
 
         public int ActiveCallsigns { get { return voiceInputs.Count(x => x.InUse); } }
 
-        public float Volume { get { return volume.Volume; } set { volume.Volume = value; } }
+        
+        public float Volume { get => volume; set => SetVolume(value); }
 
-        private bool pttMute;
-        private bool rxMute;
-        public bool Mute
-        {
-            get
-            {
-                return pttMute || rxMute;
-            }
-        }
+        public bool Mute { get => pttMute || rxMute; }
 
         private const float clickGain = 1.1f;
         private const double blockToneGain = 0.13f;
@@ -77,7 +70,7 @@ namespace GeoVR.Client
 
         public event EventHandler<TransceiverReceivingCallsignsChangedEventArgs> ReceivingCallsignsChanged;
 
-        private readonly VolumeSampleProvider volume;
+        private readonly VolumeSampleProvider volumeProvider;
         private readonly MixingSampleProvider mixer;
         private readonly BlockingToneSampleProvider blockTone;
         private ResourceSoundSampleProvider hfWhiteNoise;
@@ -91,6 +84,8 @@ namespace GeoVR.Client
         private int crackleReadCounter = 0;
         private readonly bool hfSquelchEn = false;
         private bool setHfCrackleOnRead = false;
+        private float volume = 1f;
+        private bool pttMute, rxMute;
 
         public ReceiverSampleProvider(WaveFormat waveFormat, ushort id, int voiceInputNumber)
         {
@@ -116,7 +111,7 @@ namespace GeoVR.Client
             blockTone = new BlockingToneSampleProvider(WaveFormat.SampleRate, 1) { Frequency = 180, Gain = 0 };
 
             mixer.AddMixerInput(blockTone.ToMono());
-            volume = new VolumeSampleProvider(mixer);
+            volumeProvider = new VolumeSampleProvider(mixer);
 
             hfSquelchEn = AudioConfig.Instance.HfSquelch;
         }
@@ -152,7 +147,7 @@ namespace GeoVR.Client
                 SetHfCrackle();
             }
 
-            return volume.Read(buffer, offset, count);
+            return volumeProvider.Read(buffer, offset, count);
         }
 
         public void AddOpusSamples(IAudioDto audioDto, uint frequency, float distanceRatio)
@@ -196,24 +191,23 @@ namespace GeoVR.Client
             //doClickWhenAppropriate = true;
         }
 
-        public void SetMute(bool? ptt = null, bool? rx = null)
+        public void SetPttMute(bool value)
         {
-            if (ptt == null && rx == null)
+            if (pttMute == value)
                 return;
 
-            if (ptt.HasValue)
-                pttMute = ptt.Value;
-            if (rx.HasValue)
-                rxMute = rx.Value;
+            pttMute = value;
+            SetVolume();
+            SetEffects();
+        }
 
-            if (Mute)
-            {
-                foreach (var voiceInput in voiceInputs)
-                {
-                    voiceInput.Clear();
-                }
-            }
+        public void SetReceiveMute(bool value)
+        {
+            if (rxMute == value)
+                return;
 
+            rxMute = value;
+            SetVolume();
             SetEffects();
         }
 
@@ -259,6 +253,17 @@ namespace GeoVR.Client
             }
             else
                 hfCrackleSoundProvider.Gain = 0;
+        }
+
+        private void SetVolume(float value)
+        {
+            volume = value;
+            SetVolume();
+        }
+
+        private void SetVolume()
+        {
+            volumeProvider.Volume = Mute ? 0 : volume;
         }
     }
 }
