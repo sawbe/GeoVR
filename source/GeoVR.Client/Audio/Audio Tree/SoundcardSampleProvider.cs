@@ -115,8 +115,6 @@ namespace GeoVR.Client
                     {
                         handledTransceiverIDs.Add(rxTransceiver.ID);
 
-                        if (receiverInput.Mute)
-                            continue;
                         if (!audioPlayed)
                         {
                             receiverInput.AddOpusSamples(audioDto, rxTransceiver.Frequency, rxTransceiver.DistanceRatio);
