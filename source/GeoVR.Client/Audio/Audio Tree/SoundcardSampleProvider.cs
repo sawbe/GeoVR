@@ -77,6 +77,12 @@ namespace GeoVR.Client
             }
         }
 
+        public void SetPttMute(bool mute, ushort id)
+        {
+            if (receiverInputs.TryGetValue(id, out var recv))
+                recv.SetPttMute(mute);
+        }
+
         public void SetReceiverMute(bool mute, ushort id)
         {
             if (receiverInputs.TryGetValue(id, out var recv))

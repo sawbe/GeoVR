@@ -333,13 +333,33 @@ namespace GeoVR.Client
 
         /// <summary>
         /// Enable or disable mute of a receiver
-        /// Use instead of Volume 0.0
         /// </summary>
         /// <param name="id">Transceiver Id</param>
         /// <param name="mute">true to mute</param>
         public void SetReceiverMute(ushort id, bool mute)
         {
             soundcardSampleProvider.SetReceiverMute(mute, id);
+        }
+
+        public void SetReceiverMute(IEnumerable<ushort> ids, bool mute)
+        {
+            foreach (ushort id in ids)
+                SetReceiverMute(id, mute);
+        }
+        /// <summary>
+        /// Manually set mute as if PTT has been pushed. 
+        /// (Does not actually transmit on network)
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="mute"></param>
+        public void SetPttMute(ushort id, bool mute)
+        {
+            soundcardSampleProvider.SetPttMute(mute, id);
+        }
+        public void SetPttMute(IEnumerable<ushort> ids, bool mute)
+        {
+            foreach (ushort id in ids)
+                SetPttMute(id, mute);
         }
         private void Input_InputVolumeStream(object sender, InputVolumeStreamEventArgs e)
         {
