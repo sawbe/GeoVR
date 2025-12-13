@@ -101,6 +101,7 @@ namespace GeoVR.Connection
             connection.IsConnected = false;
             connection.DisconnectRequested = false;
             connection.DisconnectRequestedReason = string.Empty;
+            connectionCheckCancelTokenSource.Cancel();
             requestDisconnectEvent.Reset();
 
             if (!string.IsNullOrWhiteSpace(connection.Callsign))
